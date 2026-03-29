@@ -1,267 +1,37 @@
-import seedSource from "../../agent-guide/data/sample-skills.json";
-
-export type GoalType = "weekly" | "total";
-export type StreakStatus = "active" | "at-risk" | "broken";
-
-export interface SkillGoal {
-  type: GoalType;
-  targetHours: number;
-}
-
-export interface Skill {
-  id: string;
-  name: string;
-  color: string;
-  goal: SkillGoal | null;
-  createdAt: string;
-}
-
-export interface PracticeSession {
-  id: string;
-  skillId: string;
-  durationMinutes: number;
-  date: string;
-  notes: string | null;
-  createdAt: string;
-}
-
-interface TrackerData {
-  skills: Skill[];
-  sessions: PracticeSession[];
-}
-
-interface DailyAggregate {
-  totalMinutes: number;
-  sessionCount: number;
-  skillNames: Set<string>;
-}
-
-export interface HeatmapDay {
-  dateKey: string;
-  dateLabel: string;
-  totalMinutes: number;
-  sessionCount: number;
-  skills: string[];
-  bucket: 0 | 1 | 2 | 3;
-  isToday: boolean;
-  summary: string;
-}
-
-export interface SkillSummary {
-  skill: Skill;
-  totalMinutes: number;
-  totalHours: number;
-  sessionCount: number;
-  currentStreak: number;
-  longestStreak: number;
-  streakStatus: StreakStatus;
-  lastPracticedAt: string | null;
-  progressValue: number;
-  progressMax: number;
-  progressCaption: string;
-  progressAriaLabel: string;
-}
-
-export interface SessionWithSkill extends PracticeSession {
-  skillName: string;
-  skillColor: string;
-}
-
-interface HeatmapSummary {
-  days: Array<HeatmapDay | null>;
-  activeDays: number;
-  totalMinutes: number;
-  busiestDay: HeatmapDay | null;
-  summaryText: string;
-  accessibleItems: HeatmapDay[];
-}
-
-const STORAGE_KEY = "skilltrack:m1";
-
-const colorPalette = Array.from(
-  new Set([
-    ...seedSource.skills.map((skill) => skill.color),
-    "#0F766E",
-    "#2563EB",
-    "#9333EA",
-    "#EA580C",
-    "#E11D48",
-    "#CA8A04",
-  ]),
-);
-
-function cloneSeedData(): TrackerData {
-  return {
-    skills: seedSource.skills.map((skill) => ({
-      ...skill,
-      goal: skill.goal ? { ...skill.goal } : null,
-    })),
-    sessions: seedSource.sessions.map((session) => ({ ...session })),
-  };
-}
-
-function parseDateKey(dateKey: string) {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function toDateKey(input: string | Date) {
-  if (typeof input === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input)) {
-    return input;
-  }
-
-  const date = typeof input === "string" ? new Date(input) : input;
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function addDays(date: Date, amount: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + amount);
-  return next;
-}
-
-function startOfWeek(date: Date) {
-  const weekday = (date.getDay() + 6) % 7;
-  return addDays(date, -weekday);
-}
-
-function diffInDays(left: string, right: string) {
-  const leftDate = parseDateKey(left);
-  const rightDate = parseDateKey(right);
-  const milliseconds = leftDate.getTime() - rightDate.getTime();
-  return Math.round(milliseconds / 86400000);
-}
-
-function formatMinutes(minutes: number) {
-  if (minutes >= 60) {
-    const hours = Math.floor(minutes / 60);
-    const remainder = minutes % 60;
-    return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
-  }
-
-  return `${minutes}m`;
-}
-
-function formatHours(minutes: number) {
-  const hours = minutes / 60;
-  if (Number.isInteger(hours)) {
-    return `${hours}`;
-  }
-
-  return hours.toFixed(1);
-}
-
-function formatDateLong(dateKey: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(parseDateKey(dateKey));
-}
-
-function calculateLongestStreak(dateKeys: string[]) {
-  if (!dateKeys.length) {
-    return 0;
-  }
-
-  const ordered = [...new Set(dateKeys)].sort();
-  let longest = 1;
-  let current = 1;
-
-  for (let index = 1; index < ordered.length; index += 1) {
-    const previous = ordered[index - 1];
-    const currentKey = ordered[index];
-
-    if (diffInDays(currentKey, previous) === 1) {
-      current += 1;
-      longest = Math.max(longest, current);
-    } else {
-      current = 1;
-    }
-  }
-
-  return longest;
-}
-
-function calculateCurrentStreak(
-  dateKeys: string[],
-  todayKey: string,
-): { count: number; status: StreakStatus } {
-  if (!dateKeys.length) {
-    return { count: 0, status: "broken" };
-  }
-
-  const ordered = [...new Set(dateKeys)].sort((left, right) =>
-    right.localeCompare(left),
-  );
-  const set = new Set(ordered);
-  const yesterdayKey = toDateKey(addDays(parseDateKey(todayKey), -1));
-
-  let anchor = "";
-  let status: StreakStatus = "broken";
-
-  if (set.has(todayKey)) {
-    anchor = todayKey;
-    status = "active";
-  } else if (set.has(yesterdayKey)) {
-    anchor = yesterdayKey;
-    status = "at-risk";
-  } else {
-    return { count: 0, status: "broken" };
-  }
-
-  let streakCount = 0;
-  let pointer = anchor;
-
-  while (set.has(pointer)) {
-    streakCount += 1;
-    pointer = toDateKey(addDays(parseDateKey(pointer), -1));
-  }
-
-  return { count: streakCount, status };
-}
-
-function parseDurationInput(rawValue: string) {
-  const input = rawValue.trim().toLowerCase();
-
-  if (!input) {
-    return { valid: false, error: "Enter a duration in minutes or hours." };
-  }
-
-  if (/^\d+(\.\d+)?$/.test(input)) {
-    const numericValue = Number(input);
-    const minutes = input.includes(".")
-      ? Math.round(numericValue * 60)
-      : Math.round(numericValue);
-
-    if (minutes < 1) {
-      return { valid: false, error: "Duration must be at least 1 minute." };
-    }
-
-    return { valid: true, minutes };
-  }
-
-  const hourMatch = input.match(/(\d+(?:\.\d+)?)\s*h/);
-  const minuteMatch = input.match(/(\d+(?:\.\d+)?)\s*m/);
-
-  if (!hourMatch && !minuteMatch) {
-    return { valid: false, error: "Use formats like 45, 1.5, or 1h 30m." };
-  }
-
-  const hours = hourMatch ? Number(hourMatch[1]) : 0;
-  const minutes = minuteMatch ? Number(minuteMatch[1]) : 0;
-  const totalMinutes = Math.round(hours * 60 + minutes);
-
-  if (totalMinutes < 1) {
-    return { valid: false, error: "Duration must be at least 1 minute." };
-  }
-
-  return { valid: true, minutes: totalMinutes };
-}
+import type {
+  TrackerData,
+  SkillGoal,
+  Skill,
+  PracticeSession,
+  SessionWithSkill,
+  SkillSummary,
+  DailyAggregate,
+  HeatmapDay,
+  HeatmapSummary,
+  GoalType,
+} from "../utils/tracker-types";
+import {
+  STORAGE_KEY,
+  colorPalette,
+  cloneSeedData,
+} from "../utils/tracker-constants";
+import {
+  parseDateKey,
+  toDateKey,
+  addDays,
+  startOfWeek,
+  diffInDays,
+} from "../utils/tracker-date";
+import {
+  formatMinutes,
+  formatHours,
+  formatDateLong,
+} from "../utils/tracker-format";
+import {
+  calculateLongestStreak,
+  calculateCurrentStreak,
+} from "../utils/tracker-streak";
+import { parseDurationInput } from "../utils/tracker-duration";
 
 export function useSkillTracker() {
   const tracker = useState<TrackerData>("skilltrack-data", () => ({
@@ -526,7 +296,7 @@ export function useSkillTracker() {
       });
     }
 
-    const offset = (parseDateKey(baseDays[0].dateKey).getDay() + 6) % 7;
+    const offset = (parseDateKey(baseDays[0]!.dateKey).getDay() + 6) % 7;
     const paddedDays: Array<HeatmapDay | null> = [
       ...Array.from({ length: offset }, () => null),
       ...baseDays,
@@ -599,7 +369,7 @@ export function useSkillTracker() {
     const skill: Skill = {
       id: `skill-${Date.now().toString(36)}`,
       name,
-      color: input.color || colorPalette[0],
+      color: input.color || colorPalette[0]!,
       goal,
       createdAt: new Date().toISOString(),
     };
@@ -678,9 +448,5 @@ export function useSkillTracker() {
     availableColors: colorPalette,
     addSkill,
     addSession,
-    parseDurationInput,
-    formatMinutes,
-    formatHours,
-    formatDateLong,
   };
 }

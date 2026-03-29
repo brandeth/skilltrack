@@ -14,7 +14,7 @@
             >
           </div>
         </div>
-        <div class="topbar__badge">Frontend MVP</div>
+        <ActionDropdown @select="handleDropdownSelect" />
       </div>
     </header>
 
@@ -35,29 +35,42 @@
       </div>
 
       <div v-else class="dashboard">
-        <section class="hero-panel" aria-labelledby="dashboard-title">
+        <section
+          ref="heroPanelRef"
+          class="hero-panel"
+          aria-labelledby="dashboard-title"
+          @mouseenter="onOrbEnter"
+          @mousemove="onOrbMove"
+          @mouseleave="onOrbLeave"
+        >
+          <div
+            class="hero-orb"
+            aria-hidden="true"
+            :style="{ transform: `translate(${orbPos.x}px, ${orbPos.y}px)` }"
+          />
           <div class="stack">
             <div class="eyebrow">Milestone 1 dashboard</div>
             <h1 id="dashboard-title" class="hero-panel__title">
-              See every hour you’ve invested in getting better.
+              {{ greeting }}, learner.
             </h1>
             <p class="hero-panel__copy">
-              A fast local-first tracker for deliberate practice. Log a session,
-              protect your streak, and keep momentum visible across every skill
-              you’re building.
+              You've practiced
+              {{ weeklySkillCount }}
+              {{ weeklySkillCount === 1 ? "skill" : "skills" }} this week. Keep
+              it up!
             </p>
             <div class="hero-panel__actions">
               <button
                 class="btn btn--primary"
                 type="button"
-                @click="focusLogForm"
+                @click="sessionDialogOpen = true"
               >
                 Log a session
               </button>
               <button
                 class="btn btn--secondary"
                 type="button"
-                @click="focusAddSkill"
+                @click="skillDialogOpen = true"
               >
                 Add a skill
               </button>
@@ -102,232 +115,16 @@
             of learning goals. Create one skill below and the logging flow
             becomes immediately available.
           </p>
-          <button class="btn btn--primary" type="button" @click="focusAddSkill">
+          <button
+            class="btn btn--primary"
+            type="button"
+            @click="skillDialogOpen = true"
+          >
             Create a skill
           </button>
         </section>
 
         <section class="bento-grid" aria-label="Dashboard widgets">
-          <article class="panel panel--log" aria-labelledby="log-session-title">
-            <div class="panel__header">
-              <div>
-                <div class="panel__eyebrow">Quick action</div>
-                <h2 id="log-session-title" class="panel__title">
-                  Log a session
-                </h2>
-              </div>
-            </div>
-
-            <form
-              ref="logFormRef"
-              class="form"
-              @submit.prevent="handleLogSession"
-            >
-              <div
-                v-if="sessionStatus.error"
-                class="status-message status-message--error"
-                role="alert"
-              >
-                {{ sessionStatus.error }}
-              </div>
-              <div
-                v-else-if="sessionStatus.success"
-                class="status-message status-message--success"
-                role="status"
-              >
-                {{ sessionStatus.success }}
-              </div>
-              <div
-                v-if="sessionStatus.warning"
-                class="status-message status-message--warning"
-                role="status"
-              >
-                {{ sessionStatus.warning }}
-              </div>
-
-              <div class="field">
-                <label for="skillId">Skill</label>
-                <select
-                  id="skillId"
-                  v-model="sessionForm.skillId"
-                  :disabled="skills.length === 0"
-                  required
-                  aria-required="true"
-                >
-                  <option value="" disabled>
-                    {{ skills.length ? "Select a skill" : "Add a skill first" }}
-                  </option>
-                  <option
-                    v-for="skill in skills"
-                    :key="skill.id"
-                    :value="skill.id"
-                  >
-                    {{ skill.name }}
-                  </option>
-                </select>
-              </div>
-
-              <div class="field-row quick-action-row">
-                <div class="field field--duration">
-                  <label for="duration">Duration</label>
-                  <input
-                    id="duration"
-                    v-model="sessionForm.durationInput"
-                    inputmode="text"
-                    autocomplete="off"
-                    placeholder="45, 1.5, or 1h 30m"
-                    required
-                    aria-required="true"
-                    aria-describedby="duration-help"
-                  />
-                  <div class="duration-support">
-                    <div id="duration-help" class="helper-text">
-                      Flexible parsing supports minutes, decimal hours, or mixed
-                      hours and minutes.
-                    </div>
-                    <div class="quick-presets-group">
-                      <span id="duration-presets-label" class="label"
-                        >Quick durations</span
-                      >
-                      <div
-                        class="quick-presets"
-                        role="group"
-                        aria-labelledby="duration-presets-label"
-                      >
-                        <button
-                          v-for="preset in durationPresets"
-                          :key="preset.label"
-                          class="chip-button"
-                          type="button"
-                          :aria-pressed="
-                            sessionForm.durationInput === preset.value
-                          "
-                          @click="sessionForm.durationInput = preset.value"
-                        >
-                          {{ preset.label }}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="field field--date">
-                  <label for="date">Date</label>
-                  <input
-                    id="date"
-                    v-model="sessionForm.date"
-                    type="date"
-                    :max="todayKey"
-                    required
-                    aria-required="true"
-                  />
-                </div>
-              </div>
-
-              <div class="field field--notes">
-                <label for="notes">
-                  Notes <span class="field-label-note">Optional</span>
-                </label>
-                <textarea
-                  id="notes"
-                  v-model="sessionForm.notes"
-                  placeholder="What clicked, what felt hard, or what to revisit next time?"
-                ></textarea>
-              </div>
-
-              <button
-                class="btn btn--primary"
-                type="submit"
-                :disabled="skills.length === 0"
-              >
-                Save session
-              </button>
-            </form>
-          </article>
-
-          <article class="panel panel--add" aria-labelledby="add-skill-title">
-            <div class="panel__header">
-              <div>
-                <div class="panel__eyebrow">Recovery path</div>
-                <h2 id="add-skill-title" class="panel__title">Add a skill</h2>
-              </div>
-            </div>
-
-            <form
-              ref="addSkillRef"
-              class="form"
-              @submit.prevent="handleAddSkill"
-            >
-              <div
-                v-if="skillStatus.error"
-                class="status-message status-message--error"
-                role="alert"
-              >
-                {{ skillStatus.error }}
-              </div>
-              <div
-                v-else-if="skillStatus.success"
-                class="status-message status-message--success"
-                role="status"
-              >
-                {{ skillStatus.success }}
-              </div>
-
-              <div class="field">
-                <label for="skill-name">Skill name</label>
-                <input
-                  id="skill-name"
-                  v-model="skillForm.name"
-                  type="text"
-                  autocomplete="off"
-                  placeholder="TypeScript, Piano, Cooking"
-                  required
-                  aria-required="true"
-                />
-              </div>
-
-              <div class="field-row">
-                <div class="field">
-                  <label for="skill-color">Accent color</label>
-                  <select id="skill-color" v-model="skillForm.color">
-                    <option
-                      v-for="color in availableColors"
-                      :key="color"
-                      :value="color"
-                    >
-                      {{ color }}
-                    </option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="goal-type">Goal type</label>
-                  <select id="goal-type" v-model="skillForm.goalType">
-                    <option value="">No goal yet</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="total">Total hours</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="field">
-                <label for="goal-hours">Goal hours</label>
-                <input
-                  id="goal-hours"
-                  v-model="skillForm.targetHours"
-                  type="number"
-                  min="1"
-                  step="0.5"
-                  placeholder="5"
-                />
-              </div>
-
-              <button class="btn btn--secondary" type="submit">
-                Create skill
-              </button>
-            </form>
-          </article>
-
           <article class="panel panel--heatmap" aria-labelledby="heatmap-title">
             <div class="panel__header">
               <div>
@@ -592,16 +389,215 @@
       </div>
     </main>
 
+    <AppDialog
+      v-model:open="sessionDialogOpen"
+      title="Log a session"
+      eyebrow="Quick action"
+    >
+      <form class="form" @submit.prevent="handleLogSession">
+        <div
+          v-if="sessionLog.status.error"
+          class="status-message status-message--error"
+          role="alert"
+        >
+          {{ sessionLog.status.error }}
+        </div>
+        <div
+          v-else-if="sessionLog.status.success"
+          class="status-message status-message--success"
+          role="status"
+        >
+          {{ sessionLog.status.success }}
+        </div>
+        <div
+          v-if="sessionLog.status.warning"
+          class="status-message status-message--warning"
+          role="status"
+        >
+          {{ sessionLog.status.warning }}
+        </div>
+
+        <div class="field">
+          <label for="dialog-skillId">Skill</label>
+          <select
+            id="dialog-skillId"
+            v-model="sessionLog.form.skillId"
+            :disabled="skills.length === 0"
+            required
+            aria-required="true"
+          >
+            <option value="" disabled>
+              {{ skills.length ? "Select a skill" : "Add a skill first" }}
+            </option>
+            <option v-for="skill in skills" :key="skill.id" :value="skill.id">
+              {{ skill.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="field-row quick-action-row">
+          <div class="field field--duration">
+            <label for="dialog-duration">Duration</label>
+            <input
+              id="dialog-duration"
+              v-model="sessionLog.form.durationInput"
+              inputmode="text"
+              autocomplete="off"
+              placeholder="45, 1.5, or 1h 30m"
+              required
+              aria-required="true"
+              aria-describedby="dialog-duration-help"
+            />
+            <div class="duration-support">
+              <div id="dialog-duration-help" class="helper-text">
+                Flexible parsing supports minutes, decimal hours, or mixed hours
+                and minutes.
+              </div>
+              <div class="quick-presets-group">
+                <span id="dialog-duration-presets-label" class="label"
+                  >Quick durations</span
+                >
+                <div
+                  class="quick-presets"
+                  role="group"
+                  aria-labelledby="dialog-duration-presets-label"
+                >
+                  <button
+                    v-for="preset in sessionLog.durationPresets"
+                    :key="preset.label"
+                    class="chip-button"
+                    type="button"
+                    :aria-pressed="
+                      sessionLog.form.durationInput === preset.value
+                    "
+                    @click="sessionLog.form.durationInput = preset.value"
+                  >
+                    {{ preset.label }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field field--date">
+            <label for="dialog-date">Date</label>
+            <input
+              id="dialog-date"
+              v-model="sessionLog.form.date"
+              type="date"
+              :max="todayKey"
+              required
+              aria-required="true"
+            />
+          </div>
+        </div>
+
+        <div class="field field--notes">
+          <label for="dialog-notes">
+            Notes <span class="field-label-note">Optional</span>
+          </label>
+          <textarea
+            id="dialog-notes"
+            v-model="sessionLog.form.notes"
+            placeholder="What clicked, what felt hard, or what to revisit next time?"
+          ></textarea>
+        </div>
+
+        <button
+          class="btn btn--primary"
+          type="submit"
+          :disabled="skills.length === 0"
+        >
+          Save session
+        </button>
+      </form>
+    </AppDialog>
+
+    <AppDialog
+      v-model:open="skillDialogOpen"
+      title="Create a skill"
+      eyebrow="Recovery path"
+    >
+      <form class="form" @submit.prevent="handleAddSkill">
+        <div
+          v-if="skillCreate.status.error"
+          class="status-message status-message--error"
+          role="alert"
+        >
+          {{ skillCreate.status.error }}
+        </div>
+        <div
+          v-else-if="skillCreate.status.success"
+          class="status-message status-message--success"
+          role="status"
+        >
+          {{ skillCreate.status.success }}
+        </div>
+
+        <div class="field">
+          <label for="dialog-skill-name">Skill name</label>
+          <input
+            id="dialog-skill-name"
+            v-model="skillCreate.form.name"
+            type="text"
+            autocomplete="off"
+            placeholder="TypeScript, Piano, Cooking"
+            required
+            aria-required="true"
+          />
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="dialog-skill-color">Accent color</label>
+            <select id="dialog-skill-color" v-model="skillCreate.form.color">
+              <option
+                v-for="color in skillCreate.availableColors"
+                :key="color"
+                :value="color"
+              >
+                {{ color }}
+              </option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="dialog-goal-type">Goal type</label>
+            <select id="dialog-goal-type" v-model="skillCreate.form.goalType">
+              <option value="">No goal yet</option>
+              <option value="weekly">Weekly</option>
+              <option value="total">Total hours</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="dialog-goal-hours">Goal hours</label>
+          <input
+            id="dialog-goal-hours"
+            v-model="skillCreate.form.targetHours"
+            type="number"
+            min="1"
+            step="0.5"
+            placeholder="5"
+          />
+        </div>
+
+        <button class="btn btn--secondary" type="submit">Create skill</button>
+      </form>
+    </AppDialog>
+
     <div class="sr-only" aria-live="polite">{{ liveMessage }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { GoalType, SkillSummary } from "./composables/useSkillTracker";
+import type { SkillSummary } from "./utils/tracker-types";
 
 const {
   hydrated,
   skills,
+  sessions,
   todayKey,
   totalHours,
   totalSessions,
@@ -610,58 +606,104 @@ const {
   featuredSkill,
   recentSessions,
   heatmap,
-  availableColors,
-  addSkill,
-  addSession,
-  formatMinutes,
-  formatHours,
-  formatDateLong,
 } = useSkillTracker();
+
+const sessionLog = useSessionForm();
+const skillCreate = useSkillForm();
 
 useHead({
   title: "Dashboard - SkillTrack",
 });
 
-const logFormRef = ref<HTMLFormElement | null>(null);
-const addSkillRef = ref<HTMLFormElement | null>(null);
 const liveMessage = ref("");
+const sessionDialogOpen = ref(false);
+const skillDialogOpen = ref(false);
 
-const sessionForm = reactive({
-  skillId: "",
-  durationInput: "",
-  date: todayKey.value,
-  notes: "",
+const heroPanelRef = ref<HTMLElement | null>(null);
+const orbPos = reactive({ x: 0, y: 0 });
+const orbTarget = reactive({ x: 0, y: 0 });
+const orbHovered = ref(false);
+let orbRaf = 0;
+
+function pickWanderTarget() {
+  const el = heroPanelRef.value;
+  if (!el) return;
+  const w = el.offsetWidth;
+  const h = el.offsetHeight;
+  orbTarget.x = Math.random() * w - 112;
+  orbTarget.y = Math.random() * h - 112;
+}
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+function orbLoop() {
+  const factor = orbHovered.value ? 0.004 : 0.0015;
+  orbPos.x = lerp(orbPos.x, orbTarget.x, factor);
+  orbPos.y = lerp(orbPos.y, orbTarget.y, factor);
+
+  if (
+    !orbHovered.value &&
+    Math.abs(orbPos.x - orbTarget.x) < 5 &&
+    Math.abs(orbPos.y - orbTarget.y) < 5
+  ) {
+    pickWanderTarget();
+  }
+
+  orbRaf = requestAnimationFrame(orbLoop);
+}
+
+let orbLeaveTimeout = 0;
+
+function onOrbEnter() {
+  clearTimeout(orbLeaveTimeout);
+  orbHovered.value = true;
+}
+
+function onOrbMove(e: MouseEvent) {
+  const el = heroPanelRef.value;
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  orbTarget.x = e.clientX - rect.left - 112;
+  orbTarget.y = e.clientY - rect.top - 112;
+}
+
+function onOrbLeave() {
+  orbLeaveTimeout = window.setTimeout(() => {
+    orbHovered.value = false;
+    pickWanderTarget();
+  }, 800);
+}
+
+onMounted(() => {
+  const el = heroPanelRef.value;
+  if (el) {
+    orbPos.x = el.offsetWidth - 112;
+    orbPos.y = el.offsetHeight - 112;
+    pickWanderTarget();
+  }
+  orbRaf = requestAnimationFrame(orbLoop);
 });
 
-const skillForm = reactive<{
-  name: string;
-  color: string;
-  goalType: GoalType | "";
-  targetHours: string;
-}>({
-  name: "",
-  color: availableColors[0] ?? "#059669",
-  goalType: "",
-  targetHours: "",
+onUnmounted(() => {
+  cancelAnimationFrame(orbRaf);
 });
 
-const sessionStatus = reactive({
-  error: "",
-  success: "",
-  warning: "",
+const greeting = computed(() => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 });
 
-const skillStatus = reactive({
-  error: "",
-  success: "",
+const weeklySkillCount = computed(() => {
+  const weekStart = toDateKey(startOfWeek(parseDateKey(todayKey.value)));
+  const uniqueSkills = new Set(
+    sessions.value.filter((s) => s.date >= weekStart).map((s) => s.skillId),
+  );
+  return uniqueSkills.size;
 });
-
-const durationPresets = [
-  { label: "15m", value: "15" },
-  { label: "30m", value: "30" },
-  { label: "45m", value: "45" },
-  { label: "1h", value: "1h" },
-];
 
 const overallStreakLabel = computed(() => {
   if (overallStreak.value.status === "active") {
@@ -686,33 +728,6 @@ const summaryCopy = computed(() => {
 
   return `${featuredSkill.value.skill.name} is currently leading your dashboard based on total effort, recent practice, and streak momentum.`;
 });
-
-function syncDefaultSkill() {
-  if (!skills.value.length) {
-    sessionForm.skillId = "";
-    return;
-  }
-
-  const currentExists = skills.value.some(
-    (skill) => skill.id === sessionForm.skillId,
-  );
-
-  if (currentExists) {
-    return;
-  }
-
-  sessionForm.skillId =
-    recentSessions.value[0]?.skillId ?? skills.value[0]?.id ?? "";
-}
-
-watch(
-  [hydrated, skills, recentSessions],
-  () => {
-    sessionForm.date = todayKey.value;
-    syncDefaultSkill();
-  },
-  { immediate: true },
-);
 
 function streakClass(
   status: SkillSummary["streakStatus"] | typeof overallStreak.value.status,
@@ -742,73 +757,45 @@ function skillStreakLabel(summary: SkillSummary) {
     : "No streak yet";
 }
 
-function focusLogForm() {
-  logFormRef.value
-    ?.querySelector<HTMLElement>("select, input, textarea, button")
-    ?.focus();
+function handleDropdownSelect(action: "session" | "skill") {
+  if (action === "session") {
+    sessionDialogOpen.value = true;
+  } else {
+    skillDialogOpen.value = true;
+  }
 }
 
-function focusAddSkill() {
-  addSkillRef.value
-    ?.querySelector<HTMLElement>("input, select, textarea, button")
-    ?.focus();
-}
+watch(sessionDialogOpen, (open) => {
+  if (open) {
+    sessionLog.status.error = "";
+    sessionLog.status.success = "";
+    sessionLog.status.warning = "";
+  }
+});
+
+watch(skillDialogOpen, (open) => {
+  if (open) {
+    skillCreate.status.error = "";
+    skillCreate.status.success = "";
+  }
+});
 
 function handleLogSession() {
-  sessionStatus.error = "";
-  sessionStatus.success = "";
-  sessionStatus.warning = "";
-
-  const result = addSession({
-    skillId: sessionForm.skillId,
-    durationInput: sessionForm.durationInput,
-    date: sessionForm.date,
-    notes: sessionForm.notes,
-  });
-
-  if (!result.ok) {
-    sessionStatus.error = result.error;
-    liveMessage.value = result.error;
-    return;
+  const result = sessionLog.submit();
+  liveMessage.value = result.liveAnnouncement;
+  if (result.ok) {
+    setTimeout(() => {
+      sessionDialogOpen.value = false;
+    }, 300);
   }
-
-  const savedSkill = skills.value.find(
-    (skill) => skill.id === result.session.skillId,
-  );
-  sessionStatus.success = `Saved ${formatMinutes(result.session.durationMinutes)} for ${savedSkill?.name ?? "your skill"}.`;
-  sessionStatus.warning = result.warning;
-  liveMessage.value = `Session saved: ${formatMinutes(result.session.durationMinutes)} of ${savedSkill?.name ?? "practice"} on ${formatDateLong(result.session.date)}.`;
-  sessionForm.durationInput = "";
-  sessionForm.notes = "";
-  sessionForm.date = todayKey.value;
-  sessionForm.skillId = result.session.skillId;
 }
 
 function handleAddSkill() {
-  skillStatus.error = "";
-  skillStatus.success = "";
-
-  const parsedTargetHours = skillForm.targetHours
-    ? Number(skillForm.targetHours)
-    : null;
-  const result = addSkill({
-    name: skillForm.name,
-    color: skillForm.color,
-    goalType: skillForm.goalType,
-    targetHours: parsedTargetHours,
-  });
-
-  if (!result.ok) {
-    skillStatus.error = result.error;
-    liveMessage.value = result.error;
-    return;
+  const result = skillCreate.submit();
+  liveMessage.value = result.liveAnnouncement;
+  if (result.ok) {
+    skillDialogOpen.value = false;
+    sessionLog.form.skillId = result.skill.id;
   }
-
-  skillStatus.success = `${result.skill.name} is ready to track.`;
-  liveMessage.value = `Skill created: ${result.skill.name}.`;
-  skillForm.name = "";
-  skillForm.goalType = "";
-  skillForm.targetHours = "";
-  sessionForm.skillId = result.skill.id;
 }
 </script>
