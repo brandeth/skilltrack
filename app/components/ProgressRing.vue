@@ -28,9 +28,26 @@ const clampedRatio = computed(() => {
 
 const radius = computed(() => (props.size - props.stroke) / 2);
 const circumference = computed(() => 2 * Math.PI * radius.value);
-const dashOffset = computed(
+const animatedOffset = ref(0);
+
+const targetOffset = computed(
   () => circumference.value * (1 - clampedRatio.value),
 );
+
+onMounted(() => {
+  // Start from empty (full offset = empty ring)
+  animatedOffset.value = circumference.value;
+  // Animate to target on next frame
+  requestAnimationFrame(() => {
+    animatedOffset.value = targetOffset.value;
+  });
+});
+
+// Update when value changes (not just on mount)
+watch(targetOffset, (val) => {
+  animatedOffset.value = val;
+});
+
 const normalizedValue = computed(() => Math.round(clampedRatio.value * 100));
 </script>
 
@@ -64,7 +81,7 @@ const normalizedValue = computed(() => Math.round(clampedRatio.value * 100));
         fill="none"
         :stroke-width="stroke"
         :stroke-dasharray="circumference"
-        :stroke-dashoffset="dashOffset"
+        :stroke-dashoffset="animatedOffset"
       />
     </svg>
     <div class="progress-ring__content">

@@ -10,11 +10,7 @@ import type {
   HeatmapSummary,
   GoalType,
 } from "../utils/tracker-types";
-import {
-  STORAGE_KEY,
-  colorPalette,
-  cloneSeedData,
-} from "../utils/tracker-constants";
+import { colorPalette, cloneSeedData } from "../utils/tracker-constants";
 import {
   parseDateKey,
   toDateKey,
@@ -34,59 +30,79 @@ import {
 import { parseDurationInput } from "../utils/tracker-duration";
 
 export function useSkillTracker() {
+  const user = useSupabaseUser();
+  const isAuthenticated = computed(() => !!user.value);
+
   const tracker = useState<TrackerData>("skilltrack-data", () => ({
     skills: [],
     sessions: [],
   }));
   const hydrated = useState<boolean>("skilltrack-hydrated", () => false);
-  const storageReady = useState<boolean>(
-    "skilltrack-storage-ready",
-    () => false,
-  );
+  const dataLoaded = useState<boolean>("skilltrack-loaded", () => false);
 
   const skills = computed(() => tracker.value.skills);
   const sessions = computed(() => tracker.value.sessions);
   const todayKey = computed(() => toDateKey(new Date()));
 
-  function persist() {
-    if (!import.meta.client || !storageReady.value) {
-      return;
-    }
+  // ── Data Loading ──────────────────────────────────────────────
+  async function loadAuthenticatedData() {
+    try {
+      const [serverSkills, serverSessions] = await Promise.all([
+        $fetch<Skill[]>("/api/skills"),
+        $fetch<PracticeSession[]>("/api/sessions"),
+      ]);
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tracker.value));
+      tracker.value = {
+        skills: serverSkills,
+        sessions: serverSessions,
+      };
+    } catch (error) {
+      console.error("Failed to load data from server:", error);
+      tracker.value = { skills: [], sessions: [] };
+    }
   }
 
-  function hydrate() {
-    if (!import.meta.client || storageReady.value) {
+  function loadGuestData() {
+    tracker.value = cloneSeedData();
+  }
+
+  async function hydrateData() {
+    if (dataLoaded.value) {
       hydrated.value = true;
       return;
     }
 
-    const rawValue = window.localStorage.getItem(STORAGE_KEY);
-
-    if (rawValue) {
-      tracker.value = JSON.parse(rawValue) as TrackerData;
+    if (isAuthenticated.value) {
+      await loadAuthenticatedData();
     } else {
-      tracker.value = cloneSeedData();
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tracker.value));
+      const isGuest =
+        useCookie("skilltrack-guest").value === "true" ||
+        useRoute().query.guest === "true";
+      if (isGuest) {
+        loadGuestData();
+      } else {
+        tracker.value = { skills: [], sessions: [] };
+      }
     }
 
-    storageReady.value = true;
+    dataLoaded.value = true;
     hydrated.value = true;
   }
 
+  // Trigger hydration on mount (client-side only)
   if (import.meta.client) {
-    onMounted(() => {
-      hydrate();
+    onMounted(async () => {
+      await hydrateData();
     });
 
-    watch(
-      tracker,
-      () => {
-        persist();
-      },
-      { deep: true },
-    );
+    // Re-load data when auth state changes (e.g., login/logout)
+    watch(isAuthenticated, async (newVal, oldVal) => {
+      if (newVal !== oldVal) {
+        dataLoaded.value = false;
+        hydrated.value = false;
+        await hydrateData();
+      }
+    });
   }
 
   const sessionsWithSkill = computed<SessionWithSkill[]>(() => {
@@ -366,7 +382,7 @@ export function useSkillTracker() {
       };
     }
 
-    const skill: Skill = {
+    const optimisticSkill: Skill = {
       id: `skill-${Date.now().toString(36)}`,
       name,
       color: input.color || colorPalette[0]!,
@@ -376,10 +392,38 @@ export function useSkillTracker() {
 
     tracker.value = {
       ...tracker.value,
-      skills: [...tracker.value.skills, skill],
+      skills: [...tracker.value.skills, optimisticSkill],
     };
 
-    return { ok: true as const, skill };
+    if (isAuthenticated.value) {
+      $fetch<Skill>("/api/skills", {
+        method: "POST",
+        body: {
+          name,
+          color: optimisticSkill.color,
+          goalType: input.goalType || null,
+          targetHours: input.targetHours ?? null,
+        },
+      })
+        .then((serverSkill) => {
+          tracker.value = {
+            ...tracker.value,
+            skills: tracker.value.skills.map((s) =>
+              s.id === optimisticSkill.id ? serverSkill : s,
+            ),
+          };
+        })
+        .catch(() => {
+          tracker.value = {
+            ...tracker.value,
+            skills: tracker.value.skills.filter(
+              (s) => s.id !== optimisticSkill.id,
+            ),
+          };
+        });
+    }
+
+    return { ok: true as const, skill: optimisticSkill };
   }
 
   function addSession(input: {
@@ -409,7 +453,7 @@ export function useSkillTracker() {
       return { ok: false as const, error: "Choose today or a past date." };
     }
 
-    const session: PracticeSession = {
+    const optimisticSession: PracticeSession = {
       id: `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
       skillId: input.skillId,
       durationMinutes: duration.minutes,
@@ -420,17 +464,88 @@ export function useSkillTracker() {
 
     tracker.value = {
       ...tracker.value,
-      sessions: [...tracker.value.sessions, session],
+      sessions: [...tracker.value.sessions, optimisticSession],
     };
+
+    if (isAuthenticated.value) {
+      $fetch<PracticeSession>("/api/sessions", {
+        method: "POST",
+        body: {
+          skillId: input.skillId,
+          durationMinutes: duration.minutes,
+          date: dateKey,
+          notes: input.notes?.trim() || null,
+        },
+      })
+        .then((serverSession) => {
+          tracker.value = {
+            ...tracker.value,
+            sessions: tracker.value.sessions.map((s) =>
+              s.id === optimisticSession.id ? serverSession : s,
+            ),
+          };
+        })
+        .catch(() => {
+          tracker.value = {
+            ...tracker.value,
+            sessions: tracker.value.sessions.filter(
+              (s) => s.id !== optimisticSession.id,
+            ),
+          };
+        });
+    }
 
     return {
       ok: true as const,
-      session,
+      session: optimisticSession,
       warning:
         duration.minutes > 480
           ? "That is a long session. It was saved, but double-check the duration if it looks off."
           : "",
     };
+  }
+
+  function deleteSkill(skillId: string) {
+    const skill = skills.value.find((s) => s.id === skillId);
+    if (!skill) return;
+
+    const removedSkill = skill;
+    const removedSessions = sessions.value.filter((s) => s.skillId === skillId);
+
+    tracker.value = {
+      skills: tracker.value.skills.filter((s) => s.id !== skillId),
+      sessions: tracker.value.sessions.filter((s) => s.skillId !== skillId),
+    };
+
+    if (isAuthenticated.value) {
+      $fetch(`/api/skills/${skillId}`, { method: "DELETE" }).catch(() => {
+        tracker.value = {
+          skills: [...tracker.value.skills, removedSkill],
+          sessions: [...tracker.value.sessions, ...removedSessions],
+        };
+      });
+    }
+  }
+
+  function deleteSession(sessionId: string) {
+    const session = sessions.value.find((s) => s.id === sessionId);
+    if (!session) return;
+
+    const removedSession = session;
+
+    tracker.value = {
+      ...tracker.value,
+      sessions: tracker.value.sessions.filter((s) => s.id !== sessionId),
+    };
+
+    if (isAuthenticated.value) {
+      $fetch(`/api/sessions/${sessionId}`, { method: "DELETE" }).catch(() => {
+        tracker.value = {
+          ...tracker.value,
+          sessions: [...tracker.value.sessions, removedSession],
+        };
+      });
+    }
   }
 
   return {
@@ -448,5 +563,7 @@ export function useSkillTracker() {
     availableColors: colorPalette,
     addSkill,
     addSession,
+    deleteSkill,
+    deleteSession,
   };
 }

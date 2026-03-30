@@ -1,34 +1,34 @@
 :root {
-  --color-bg-primary: #FAFAF8;
-  --color-bg-secondary: #F2F2EE;
-  --color-bg-tertiary: #E8E8E3;
-  --color-surface: #FFFFFF;
-  --color-border: #DDDDD6;
-  --color-border-subtle: #E8E8E2;
+  --color-bg-primary: #fafaf8;
+  --color-bg-secondary: #f2f2ee;
+  --color-bg-tertiary: #e8e8e3;
+  --color-surface: #ffffff;
+  --color-border: #ddddd6;
+  --color-border-subtle: #e8e8e2;
 
-  --color-text-primary: #1A1D1A;
-  --color-text-secondary: #4A524A;
-  --color-text-tertiary: #7A837A;
+  --color-text-primary: #1a1d1a;
+  --color-text-secondary: #4a524a;
+  --color-text-tertiary: #7a837a;
 
   --color-accent: #059669;
   --color-accent-hover: #047857;
-  --color-accent-subtle: #ECFDF5;
+  --color-accent-subtle: #ecfdf5;
 
-  --color-success: #16A34A;
-  --color-warning: #D97706;
-  --color-error: #DC2626;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
 
-  --color-streak: #F59E0B;
+  --color-streak: #f59e0b;
   --color-progress: #059669;
 
-  --color-heatmap-empty: #EAEDE8;
-  --color-heatmap-light: #A7F3D0;
-  --color-heatmap-medium: #34D399;
+  --color-heatmap-empty: #eaede8;
+  --color-heatmap-light: #a7f3d0;
+  --color-heatmap-medium: #34d399;
   --color-heatmap-heavy: #059669;
 
-  --font-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-heading: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
 
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
@@ -68,9 +68,12 @@
   --radius-xl: 1rem;
   --radius-full: 9999rem;
 
-  --shadow-sm: 0 1px 3px rgba(26,29,26,0.06);
-  --shadow-md: 0 4px 8px -1px rgba(26,29,26,0.08), 0 2px 4px -2px rgba(26,29,26,0.04);
-  --shadow-lg: 0 12px 20px -4px rgba(26,29,26,0.12), 0 4px 8px -4px rgba(26,29,26,0.06);
+  --shadow-sm: 0 1px 3px rgba(26, 29, 26, 0.06);
+  --shadow-md:
+    0 4px 8px -1px rgba(26, 29, 26, 0.08), 0 2px 4px -2px rgba(26, 29, 26, 0.04);
+  --shadow-lg:
+    0 12px 20px -4px rgba(26, 29, 26, 0.12),
+    0 4px 8px -4px rgba(26, 29, 26, 0.06);
 
   --topbar-height: 3.5rem;
   --content-max-width: 72rem;
@@ -81,34 +84,107 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --color-bg-primary: #131614;
-    --color-bg-secondary: #1C201C;
-    --color-bg-tertiary: #262B26;
-    --color-surface: #1C201C;
-    --color-border: #333A33;
-    --color-border-subtle: #262B26;
+    --color-bg-secondary: #1c201c;
+    --color-bg-tertiary: #262b26;
+    --color-surface: #1c201c;
+    --color-border: #333a33;
+    --color-border-subtle: #262b26;
 
-    --color-text-primary: #ECF0EC;
-    --color-text-secondary: #A0AAA0;
-    --color-text-tertiary: #6B766B;
+    --color-text-primary: #ecf0ec;
+    --color-text-secondary: #a0aaa0;
+    --color-text-tertiary: #6b766b;
 
-    --color-accent: #34D399;
-    --color-accent-hover: #6EE7B7;
-    --color-accent-subtle: #1A2E22;
+    --color-accent: #34d399;
+    --color-accent-hover: #6ee7b7;
+    --color-accent-subtle: #1a2e22;
 
-    --color-success: #4ADE80;
-    --color-warning: #FBBF24;
-    --color-error: #F87171;
+    --color-success: #4ade80;
+    --color-warning: #fbbf24;
+    --color-error: #f87171;
 
-    --color-streak: #FBBF24;
-    --color-progress: #34D399;
+    --color-streak: #fbbf24;
+    --color-progress: #34d399;
 
-    --color-heatmap-empty: #1E231E;
-    --color-heatmap-light: #065F46;
+    --color-heatmap-empty: #1e231e;
+    --color-heatmap-light: #065f46;
     --color-heatmap-medium: #059669;
-    --color-heatmap-heavy: #34D399;
+    --color-heatmap-heavy: #34d399;
 
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-    --shadow-md: 0 4px 8px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.25);
-    --shadow-lg: 0 12px 20px -4px rgba(0,0,0,0.5), 0 4px 8px -4px rgba(0,0,0,0.3);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md:
+      0 4px 8px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.25);
+    --shadow-lg:
+      0 12px 20px -4px rgba(0, 0, 0, 0.5), 0 4px 8px -4px rgba(0, 0, 0, 0.3);
   }
+}
+
+[data-theme="dark"] {
+  --color-bg-primary: #131614;
+  --color-bg-secondary: #1c201c;
+  --color-bg-tertiary: #262b26;
+  --color-surface: #1c201c;
+  --color-border: #333a33;
+  --color-border-subtle: #262b26;
+
+  --color-text-primary: #ecf0ec;
+  --color-text-secondary: #a0aaa0;
+  --color-text-tertiary: #6b766b;
+
+  --color-accent: #34d399;
+  --color-accent-hover: #6ee7b7;
+  --color-accent-subtle: #1a2e22;
+
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+
+  --color-streak: #fbbf24;
+  --color-progress: #34d399;
+
+  --color-heatmap-empty: #1e231e;
+  --color-heatmap-light: #065f46;
+  --color-heatmap-medium: #059669;
+  --color-heatmap-heavy: #34d399;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md:
+    0 4px 8px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.25);
+  --shadow-lg:
+    0 12px 20px -4px rgba(0, 0, 0, 0.5), 0 4px 8px -4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] {
+  --color-bg-primary: #fafaf8;
+  --color-bg-secondary: #f2f2ee;
+  --color-bg-tertiary: #e8e8e3;
+  --color-surface: #ffffff;
+  --color-border: #ddddd6;
+  --color-border-subtle: #e8e8e2;
+
+  --color-text-primary: #1a1d1a;
+  --color-text-secondary: #4a524a;
+  --color-text-tertiary: #7a837a;
+
+  --color-accent: #059669;
+  --color-accent-hover: #047857;
+  --color-accent-subtle: #ecfdf5;
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+
+  --color-streak: #f59e0b;
+  --color-progress: #059669;
+
+  --color-heatmap-empty: #eaede8;
+  --color-heatmap-light: #a7f3d0;
+  --color-heatmap-medium: #34d399;
+  --color-heatmap-heavy: #059669;
+
+  --shadow-sm: 0 1px 3px rgba(26, 29, 26, 0.06);
+  --shadow-md:
+    0 4px 8px -1px rgba(26, 29, 26, 0.08), 0 2px 4px -2px rgba(26, 29, 26, 0.04);
+  --shadow-lg:
+    0 12px 20px -4px rgba(26, 29, 26, 0.12),
+    0 4px 8px -4px rgba(26, 29, 26, 0.06);
 }

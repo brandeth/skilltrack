@@ -209,8 +209,31 @@ button {
     color-mix(in srgb, var(--color-accent) 16%, transparent) 0%,
     transparent 70%
   );
-  pointer-events: none;
+  pointer-events: all;
+  cursor: pointer;
   will-change: transform;
+}
+
+.hero-orb--pulse {
+  animation: orb-pulse 1.2s ease-out;
+}
+
+@keyframes orb-pulse {
+  0% {
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--color-accent) 30%, transparent),
+      0 0 0 0 color-mix(in srgb, var(--color-accent) 15%, transparent);
+  }
+  40% {
+    box-shadow:
+      0 0 40px 20px color-mix(in srgb, var(--color-accent) 18%, transparent),
+      0 0 80px 50px color-mix(in srgb, var(--color-accent) 8%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 80px 60px transparent,
+      0 0 160px 100px transparent;
+  }
 }
 
 .eyebrow,
@@ -723,6 +746,22 @@ button {
   background: transparent;
 }
 
+@keyframes heatmap-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.heatmap-cell {
+  animation: heatmap-pop 300ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation-delay: calc(var(--cell-index, 0) * 4ms);
+}
+
 .heatmap-legend {
   align-items: center;
   justify-content: space-between;
@@ -802,7 +841,7 @@ button {
 .progress-ring__value {
   stroke: var(--ring-color);
   stroke-linecap: round;
-  transition: stroke-dashoffset 280ms ease;
+  transition: stroke-dashoffset 600ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .progress-ring__content {
@@ -887,4 +926,76 @@ button {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── Topbar actions ──────────────────────────────────────────── */
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.topbar__signout {
+  min-height: 2.5rem;
+  font-size: var(--text-sm);
+}
+
+/* ── Guest banner ────────────────────────────────────────────── */
+
+.guest-banner {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.guest-banner__link {
+  color: var(--color-accent);
+  font-weight: var(--font-medium);
+  text-decoration: none;
+}
+
+.guest-banner__link:hover {
+  text-decoration: underline;
+}
+
+/* ── Delete / action buttons ─────────────────────────────────── */
+
+.btn--sm {
+  min-height: 2rem;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.btn--danger {
+  background: var(--color-error);
+  color: white;
+  border-color: transparent;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--danger:hover {
+  background: color-mix(in srgb, var(--color-error) 85%, black);
+}
+
+.skill-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.session-item__delete {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+}
+
+.dialog-confirm-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
 }
