@@ -376,7 +376,9 @@
                 v-for="summary in skillSummaries"
                 :key="summary.skill.id"
                 class="skill-card"
+                :style="{ '--skill-color': summary.skill.color }"
               >
+                <SkillCardOrb />
                 <div class="skill-card__header">
                   <div class="skill-card__title-row">
                     <span

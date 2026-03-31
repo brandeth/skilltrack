@@ -53,44 +53,90 @@
           <div class="hero__visual" aria-hidden="true">
             <div class="hero-showcase">
               <div class="showcase-card showcase-card--streak">
-                <div class="showcase-card__eyebrow">Current streak</div>
-                <div class="showcase-card__value">12 days</div>
-                <div class="showcase-pill showcase-pill--active">Active</div>
+                <div class="showcase-streak-top">
+                  <div class="showcase-card__eyebrow">Current streak</div>
+                  <div class="showcase-pill showcase-pill--active">Active</div>
+                </div>
+                <div class="showcase-streak-hero">
+                  <span class="showcase-streak-fire" aria-hidden="true">🔥</span>
+                  <span class="showcase-card__value">12 days</span>
+                </div>
+                <div class="showcase-streak-detail">
+                  <span class="helper-text">Best: 18 days</span>
+                  <span class="helper-text">·</span>
+                  <span class="helper-text">3 skills today</span>
+                </div>
               </div>
               <div class="showcase-card showcase-card--ring">
-                <svg
-                  class="showcase-ring"
-                  width="100"
-                  height="100"
-                  viewBox="0 0 100 100"
-                >
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="42"
-                    fill="none"
-                    stroke="var(--color-border)"
-                    stroke-width="8"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="42"
-                    fill="none"
-                    stroke="var(--color-accent)"
-                    stroke-width="8"
-                    stroke-dasharray="264"
-                    stroke-dashoffset="66"
-                    stroke-linecap="round"
-                    transform="rotate(-90 50 50)"
-                  />
-                </svg>
-                <div class="showcase-ring__label">75%</div>
+                <div class="showcase-card__eyebrow">Weekly goal</div>
+                <div class="showcase-ring-wrap">
+                  <svg
+                    class="showcase-ring"
+                    width="100"
+                    height="100"
+                    viewBox="0 0 100 100"
+                  >
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      fill="none"
+                      stroke="var(--color-border)"
+                      stroke-width="8"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      fill="none"
+                      stroke="var(--color-accent)"
+                      stroke-width="8"
+                      stroke-dasharray="264"
+                      stroke-dashoffset="66"
+                      stroke-linecap="round"
+                      transform="rotate(-90 50 50)"
+                    />
+                  </svg>
+                  <div class="showcase-ring__label">75%</div>
+                </div>
+                <div class="showcase-ring__caption">3.75 / 5 hrs this week</div>
               </div>
               <div class="showcase-card showcase-card--hours">
                 <div class="showcase-card__eyebrow">Total hours</div>
                 <div class="showcase-card__value">47.5</div>
                 <div class="helper-text">Across 6 skills</div>
+                <ul class="showcase-hours-bars">
+                  <li class="showcase-hours-bar">
+                    <span class="showcase-hours-bar__name">Spanish</span>
+                    <div class="showcase-hours-bar__track">
+                      <div
+                        class="showcase-hours-bar__fill"
+                        style="width: 100%; background-color: #059669"
+                      />
+                    </div>
+                    <span class="showcase-hours-bar__val">14.2</span>
+                  </li>
+                  <li class="showcase-hours-bar">
+                    <span class="showcase-hours-bar__name">Guitar</span>
+                    <div class="showcase-hours-bar__track">
+                      <div
+                        class="showcase-hours-bar__fill"
+                        style="width: 72%; background-color: #8b5cf6"
+                      />
+                    </div>
+                    <span class="showcase-hours-bar__val">10.3</span>
+                  </li>
+                  <li class="showcase-hours-bar">
+                    <span class="showcase-hours-bar__name">TypeScript</span>
+                    <div class="showcase-hours-bar__track">
+                      <div
+                        class="showcase-hours-bar__fill"
+                        style="width: 58%; background-color: #3178c6"
+                      />
+                    </div>
+                    <span class="showcase-hours-bar__val">8.2</span>
+                  </li>
+                </ul>
               </div>
               <div class="showcase-card showcase-card--heatmap">
                 <div class="showcase-card__eyebrow">90-day heatmap</div>
@@ -280,6 +326,9 @@ const heatmapBuckets = [
 }
 
 .showcase-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   padding: var(--space-5);
   border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--color-surface) 92%, transparent);
@@ -293,7 +342,6 @@ const heatmapBuckets = [
   letter-spacing: 0.08em;
   font-weight: var(--font-semibold);
   color: var(--color-text-tertiary);
-  margin-bottom: var(--space-2);
 }
 
 .showcase-card__value {
@@ -307,7 +355,6 @@ const heatmapBuckets = [
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  margin-top: var(--space-3);
   padding: 0.35rem 0.7rem;
   border-radius: var(--radius-full);
   font-size: var(--text-xs);
@@ -327,10 +374,42 @@ const heatmapBuckets = [
   background: color-mix(in srgb, var(--color-success) 12%, transparent);
 }
 
+.showcase-streak-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.showcase-streak-hero {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.showcase-streak-fire {
+  font-size: var(--text-2xl);
+}
+
+.showcase-streak-detail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
 .showcase-card--ring {
+  align-items: center;
+}
+
+.showcase-card--ring .showcase-card__eyebrow {
+  align-self: flex-start;
+}
+
+.showcase-ring-wrap {
+  position: relative;
   display: grid;
   place-items: center;
-  position: relative;
 }
 
 .showcase-ring__label {
@@ -340,11 +419,20 @@ const heatmapBuckets = [
   font-weight: var(--font-bold);
 }
 
+.showcase-card--ring .showcase-ring__caption {
+  margin-top: auto;
+}
+
+.showcase-ring__caption {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+
 .showcase-heatmap {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 0.2rem;
-  margin-top: var(--space-2);
 }
 
 .showcase-heatmap__cell {
@@ -363,6 +451,56 @@ const heatmapBuckets = [
 
 .showcase-heatmap__cell[data-bucket="3"] {
   background: var(--color-heatmap-heavy);
+}
+
+/* ── Showcase Hours enrichment ──────────────────── */
+
+.showcase-hours-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+
+.showcase-hours-bar {
+  display: grid;
+  grid-template-columns: 5rem 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.showcase-hours-bar__name {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.showcase-hours-bar__track {
+  height: 0.375rem;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-border) 40%, transparent);
+  overflow: hidden;
+}
+
+.showcase-hours-bar__fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+}
+
+.showcase-hours-bar__val {
+  font-family: var(--font-heading);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+  text-align: right;
+  min-width: 2rem;
 }
 
 /* ── Features ──────────────────────────────────────── */

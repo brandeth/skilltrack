@@ -721,15 +721,26 @@ button {
 }
 
 .skill-card {
+  position: relative;
+  overflow: hidden;
   display: grid;
   gap: var(--space-4);
   padding: var(--space-5);
   border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--skill-color, var(--color-border)) 20%,
+      var(--color-border)
+    );
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--color-surface) 90%, transparent),
-    color-mix(in srgb, var(--color-bg-secondary) 90%, transparent)
+    var(--color-surface),
+    color-mix(
+      in srgb,
+      var(--skill-color, var(--color-bg-secondary)) 12%,
+      var(--color-surface)
+    )
   );
   transition:
     transform 160ms ease,
@@ -739,6 +750,73 @@ button {
 .skill-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+}
+
+.skill-card__orb-area {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.skill-card__orb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8rem;
+  height: 8rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--skill-color, var(--color-accent)) 20%, transparent)
+      0%,
+    transparent 70%
+  );
+  pointer-events: all;
+  cursor: pointer;
+  will-change: transform;
+}
+
+.skill-card__orb--pulse {
+  animation: skill-orb-pulse 1.2s ease-out;
+}
+
+@keyframes skill-orb-pulse {
+  0% {
+    box-shadow:
+      0 0 0 0
+        color-mix(
+          in srgb,
+          var(--skill-color, var(--color-accent)) 30%,
+          transparent
+        ),
+      0 0 0 0
+        color-mix(
+          in srgb,
+          var(--skill-color, var(--color-accent)) 15%,
+          transparent
+        );
+  }
+  40% {
+    box-shadow:
+      0 0 30px 15px
+        color-mix(
+          in srgb,
+          var(--skill-color, var(--color-accent)) 18%,
+          transparent
+        ),
+      0 0 60px 35px
+        color-mix(
+          in srgb,
+          var(--skill-color, var(--color-accent)) 8%,
+          transparent
+        );
+  }
+  100% {
+    box-shadow:
+      0 0 60px 40px transparent,
+      0 0 120px 70px transparent;
+  }
 }
 
 .skill-card__header {
@@ -789,7 +867,7 @@ button {
 .skill-card__progress-fill {
   height: 100%;
   border-radius: var(--radius-full);
-  background: var(--color-accent);
+  background: var(--skill-color, var(--color-accent));
   transition: width 300ms ease;
 }
 
@@ -802,11 +880,21 @@ button {
 .skill-card__metric {
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--color-surface) 60%, transparent);
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in srgb, white 40%, transparent),
+    0 1px 3px 0
+      color-mix(
+        in srgb,
+        var(--skill-color, var(--color-border)) 8%,
+        transparent
+      );
 }
 
 .skill-card__metric + .skill-card__metric {
-  border-left: 1px solid var(--color-border);
   padding-left: var(--space-4);
 }
 
