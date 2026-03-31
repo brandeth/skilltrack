@@ -230,3 +230,15 @@ onUnmounted(() => {
   }
 }
 </style>
+
+<style>
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .action-trigger {
+    color: #111827;
+  }
+}
+
+[data-theme="dark"] .action-trigger {
+  color: #111827;
+}
+</style>

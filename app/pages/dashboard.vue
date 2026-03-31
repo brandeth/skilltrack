@@ -69,63 +69,107 @@
             @click="onOrbClick"
             @animationend="orbPulsing = false"
           />
-          <div class="stack">
-            <div class="eyebrow">Milestone 1 dashboard</div>
-            <h1 id="dashboard-title" class="hero-panel__title">
-              {{ greeting }}, learner.
-            </h1>
-            <p class="hero-panel__copy">
-              You've practiced
-              {{ weeklySkillCount }}
-              {{ weeklySkillCount === 1 ? "skill" : "skills" }} this week. Keep
-              it up!
-            </p>
+          <div class="hero-panel__top">
+            <div class="stack">
+              <div class="eyebrow">Milestone 1 dashboard</div>
+              <h1 id="dashboard-title" class="hero-panel__title">
+                {{ greeting }}, learner.
+              </h1>
+              <div class="hero-panel__copy-row">
+                <p class="hero-panel__copy">
+                  {{ weeklySkillCount }}
+                  {{ weeklySkillCount === 1 ? "skill" : "skills" }} practiced
+                  this week
+                </p>
+                <div
+                  :class="['status-pill', streakClass(overallStreak.status)]"
+                >
+                  {{ overallStreakLabel }}
+                </div>
+              </div>
+            </div>
             <div class="hero-panel__actions">
-              <button
-                class="btn btn--primary"
-                type="button"
-                @click="sessionDialogOpen = true"
-              >
-                Log a session
-              </button>
               <button
                 class="btn btn--secondary"
                 type="button"
                 @click="skillDialogOpen = true"
               >
-                Add a skill
+                + Add skill
+              </button>
+              <button
+                class="btn btn--primary"
+                type="button"
+                @click="sessionDialogOpen = true"
+              >
+                Log session
               </button>
             </div>
           </div>
 
-          <aside class="hero-summary" aria-label="Overall dashboard summary">
-            <div :class="['status-pill', streakClass(overallStreak.status)]">
-              {{ overallStreakLabel }}
+          <div class="metric-grid">
+            <div class="metric">
+              <div class="metric__label">Total hours</div>
+              <div class="metric__value">
+                {{ animatedTotalHours.toFixed(1) }}
+              </div>
+              <div class="metric__sublabel">↑ across all skills</div>
             </div>
-            <div class="metric-grid">
-              <div class="metric">
-                <div class="metric__label">Total hours</div>
-                <div class="metric__value">
-                  {{ animatedTotalHours.toFixed(1) }}
-                </div>
+            <div class="metric">
+              <div class="metric__label">Sessions</div>
+              <div class="metric__value">
+                {{ Math.round(animatedTotalSessions) }}
               </div>
-              <div class="metric">
-                <div class="metric__label">Total sessions</div>
-                <div class="metric__value">
-                  {{ Math.round(animatedTotalSessions) }}
-                </div>
-              </div>
-              <div class="metric">
-                <div class="metric__label">Tracked skills</div>
-                <div class="metric__value">
-                  {{ Math.round(animatedSkillCount) }}
-                </div>
+              <div class="metric__sublabel">
+                avg
+                {{
+                  totalSessions > 0
+                    ? Math.round((parseFloat(totalHours) * 60) / totalSessions)
+                    : 0
+                }}
+                min each
               </div>
             </div>
-            <p class="helper-text">
-              {{ summaryCopy }}
+            <div class="metric">
+              <div class="metric__label">Tracked skills</div>
+              <div class="metric__value">
+                {{ Math.round(animatedSkillCount) }}
+              </div>
+              <div class="metric__sublabel">
+                {{
+                  featuredSkill
+                    ? featuredSkill.skill.name + " leading"
+                    : "No leader yet"
+                }}
+              </div>
+            </div>
+            <div class="metric">
+              <div class="metric__label">Best streak</div>
+              <div class="metric__value">
+                {{ Math.round(animatedBestStreak) }}
+              </div>
+              <div class="metric__sublabel">
+                {{
+                  bestStreak.skillName
+                    ? "days · " + bestStreak.skillName
+                    : "No streaks yet"
+                }}
+              </div>
+            </div>
+          </div>
+
+          <div v-if="featuredSkill" class="hero-panel__featured-bar">
+            <p class="hero-panel__featured-text">
+              <strong>{{ featuredSkill.skill.name }}</strong> is leading — most
+              hours, most recent session, strongest streak momentum.
             </p>
-          </aside>
+            <button
+              class="btn btn--sm btn--secondary"
+              type="button"
+              @click="scrollToFeatured"
+            >
+              View skill ↗
+            </button>
+          </div>
         </section>
 
         <section
@@ -237,6 +281,7 @@
 
           <article
             class="panel panel--featured"
+            :style="{ '--skill-accent': featuredSkill?.skill.color }"
             aria-labelledby="featured-title"
           >
             <div class="panel__header">
@@ -254,64 +299,60 @@
 
             <div v-if="featuredSkill" class="featured-card">
               <div class="featured-card__hero">
-                <ProgressRing
-                  :value="featuredSkill.progressValue"
-                  :max="featuredSkill.progressMax"
-                  :size="120"
-                  :stroke="9"
-                  :color="featuredSkill.skill.color"
-                  :label="featuredSkill.progressAriaLabel"
-                  :caption="featuredSkill.progressCaption"
-                />
-                <div class="stack featured-card__content">
-                  <div class="featured-card__title-row">
-                    <span
-                      class="skill-swatch"
-                      :style="{ backgroundColor: featuredSkill.skill.color }"
-                      aria-hidden="true"
-                    />
-                    <p class="featured-card__title">
-                      {{ featuredSkill.skill.name }}
-                    </p>
+                <div class="featured-card__ring-wrap">
+                  <ProgressRing
+                    :value="featuredSkill.progressValue"
+                    :max="featuredSkill.progressMax"
+                    :size="132"
+                    :stroke="10"
+                    :color="featuredSkill.skill.color"
+                    :label="featuredSkill.progressAriaLabel"
+                    caption="of weekly goal"
+                  />
+                </div>
+                <div class="featured-card__headline">
+                  <div class="featured-card__big-stat">
+                    <span class="featured-card__number">
+                      {{ formatHours(featuredSkill.totalMinutes) }}
+                    </span>
+                    <span class="featured-card__unit">hours total</span>
                   </div>
-                  <p class="featured-card__copy">
-                    {{ featuredSkill.sessionCount }} sessions logged,
-                    {{ formatHours(featuredSkill.totalMinutes) }} hours total,
-                    and a {{ featuredSkill.currentStreak }} day
-                    {{
-                      featuredSkill.streakStatus === "broken"
-                        ? "reset"
-                        : "running"
-                    }}
-                    streak.
-                  </p>
-                  <div
-                    :class="[
-                      'status-pill',
-                      streakClass(featuredSkill.streakStatus),
-                    ]"
-                  >
-                    {{ skillStreakLabel(featuredSkill) }}
+                  <div class="featured-card__big-stat">
+                    <span class="featured-card__number">
+                      {{ featuredSkill.sessionCount }}
+                    </span>
+                    <span class="featured-card__unit">sessions</span>
                   </div>
                 </div>
               </div>
 
-              <div class="featured-card__stats">
-                <div class="stat-box">
-                  <span class="label">Longest streak</span>
-                  <span class="stat-box__value"
-                    >{{ featuredSkill.longestStreak }} days</span
-                  >
+              <dl
+                class="featured-card__stats"
+                :aria-label="`${featuredSkill.skill.name} key stats`"
+              >
+                <div class="featured-card__stat featured-card__stat--weekly">
+                  <dt>This week</dt>
+                  <dd>{{ featuredSkill.progressCaption }}</dd>
                 </div>
-                <div class="stat-box">
-                  <span class="label">Recent activity</span>
-                  <span class="stat-box__value">{{
-                    featuredSkill.lastPracticedAt
-                      ? formatDateLong(featuredSkill.lastPracticedAt)
-                      : "No sessions yet"
-                  }}</span>
+                <div class="featured-card__stat">
+                  <dt>Current streak</dt>
+                  <dd>{{ featuredSkill.currentStreak }} days</dd>
                 </div>
-              </div>
+                <div class="featured-card__stat">
+                  <dt>Best streak</dt>
+                  <dd>{{ featuredSkill.longestStreak }} days</dd>
+                </div>
+                <div class="featured-card__stat">
+                  <dt>Last practiced</dt>
+                  <dd>
+                    {{
+                      featuredSkill.lastPracticedAt
+                        ? formatDateLong(featuredSkill.lastPracticedAt)
+                        : "No sessions yet"
+                    }}
+                  </dd>
+                </div>
+              </dl>
             </div>
 
             <p v-else class="helper-text">
@@ -336,24 +377,49 @@
                 :key="summary.skill.id"
                 class="skill-card"
               >
-                <div class="skill-card__title-row">
-                  <span
-                    class="skill-swatch"
-                    :style="{ backgroundColor: summary.skill.color }"
-                    aria-hidden="true"
-                  />
-                  <div>
+                <div class="skill-card__header">
+                  <div class="skill-card__title-row">
+                    <span
+                      class="skill-swatch"
+                      :style="{ backgroundColor: summary.skill.color }"
+                      aria-hidden="true"
+                    />
                     <h3 class="skill-card__name">{{ summary.skill.name }}</h3>
-                    <div class="skill-card__meta">
-                      {{ summary.progressCaption }}
-                    </div>
+                  </div>
+                  <div class="skill-card__best-badge">
+                    <span aria-hidden="true">🏆</span> Best:
+                    {{ summary.longestStreak }} days
                   </div>
                 </div>
 
-                <div
-                  :class="['status-pill', streakClass(summary.streakStatus)]"
-                >
-                  {{ skillStreakLabel(summary) }}
+                <div class="skill-card__progress">
+                  <div class="skill-card__progress-header">
+                    <span class="label">This week</span>
+                    <span class="skill-card__progress-value">{{
+                      summary.progressCaption
+                    }}</span>
+                  </div>
+                  <div
+                    class="skill-card__progress-bar"
+                    role="progressbar"
+                    :aria-valuenow="summary.progressValue"
+                    :aria-valuemin="0"
+                    :aria-valuemax="summary.progressMax"
+                    :aria-label="summary.progressAriaLabel"
+                  >
+                    <div
+                      class="skill-card__progress-fill"
+                      :style="{
+                        width: summary.progressMax
+                          ? Math.min(
+                              (summary.progressValue / summary.progressMax) *
+                                100,
+                              100,
+                            ) + '%'
+                          : '0%',
+                      }"
+                    />
+                  </div>
                 </div>
 
                 <div
@@ -361,29 +427,29 @@
                   :aria-label="`${summary.skill.name} totals`"
                 >
                   <div class="skill-card__metric">
-                    <span class="label">Hours</span>
+                    <span class="label">Total hours</span>
                     <strong>{{ formatHours(summary.totalMinutes) }}</strong>
                   </div>
                   <div class="skill-card__metric">
                     <span class="label">Sessions</span>
                     <strong>{{ summary.sessionCount }}</strong>
                   </div>
-                  <div class="skill-card__metric">
-                    <span class="label">Current streak</span>
-                    <strong>{{ summary.currentStreak }} days</strong>
-                  </div>
-                  <div class="skill-card__metric">
-                    <span class="label">Longest streak</span>
-                    <strong>{{ summary.longestStreak }} days</strong>
-                  </div>
                 </div>
+
                 <div class="skill-card__actions">
                   <button
-                    class="btn btn--sm btn--danger"
+                    class="btn btn--sm btn--secondary"
                     type="button"
                     @click="confirmDeleteSkill(summary.skill)"
                   >
                     Delete
+                  </button>
+                  <button
+                    class="btn btn--sm btn--secondary"
+                    type="button"
+                    @click="restartStreak(summary.skill)"
+                  >
+                    Restart streak ↗
                   </button>
                 </div>
               </li>
@@ -409,12 +475,40 @@
                 class="session-item"
               >
                 <div class="session-item__title-row">
-                  <span
-                    class="skill-swatch"
-                    :style="{ backgroundColor: session.skillColor }"
-                    aria-hidden="true"
-                  />
-                  <strong>{{ session.skillName }}</strong>
+                  <span class="session-item__title-group">
+                    <span
+                      class="skill-swatch"
+                      :style="{ backgroundColor: session.skillColor }"
+                      aria-hidden="true"
+                    />
+                    <strong>{{ session.skillName }}</strong>
+                  </span>
+                  <button
+                    class="btn btn--sm btn--danger session-item__delete"
+                    type="button"
+                    aria-label="Delete session"
+                    @click="confirmDeleteSession(session)"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path
+                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                      />
+                      <line x1="10" y1="11" x2="10" y2="17" />
+                      <line x1="14" y1="11" x2="14" y2="17" />
+                    </svg>
+                  </button>
                 </div>
                 <div class="session-item__meta">
                   {{ formatMinutes(session.durationMinutes) }} on
@@ -426,13 +520,6 @@
                 <p v-else class="session-item__notes">
                   No notes for this session.
                 </p>
-                <button
-                  class="btn btn--sm btn--danger session-item__delete"
-                  type="button"
-                  @click="confirmDeleteSession(session)"
-                >
-                  Delete
-                </button>
               </li>
             </ul>
 
@@ -749,6 +836,18 @@ const animatedTotalHours = useCountUp(
 );
 const animatedTotalSessions = useCountUp(computed(() => totalSessions.value));
 const animatedSkillCount = useCountUp(computed(() => skills.value.length));
+const bestStreak = computed(() => {
+  let best = 0;
+  let skillName = "";
+  for (const s of skillSummaries.value) {
+    if (s.longestStreak > best) {
+      best = s.longestStreak;
+      skillName = s.skill.name;
+    }
+  }
+  return { days: best, skillName };
+});
+const animatedBestStreak = useCountUp(computed(() => bestStreak.value.days));
 
 const sessionLog = useSessionForm();
 const skillCreate = useSkillForm();
@@ -989,6 +1088,17 @@ function handleAddSkill() {
     skillDialogOpen.value = false;
     sessionLog.form.skillId = result.skill.id;
   }
+}
+
+function restartStreak(skill: Skill) {
+  sessionLog.form.skillId = skill.id;
+  sessionDialogOpen.value = true;
+}
+
+function scrollToFeatured() {
+  document
+    .getElementById("featured-title")
+    ?.scrollIntoView({ behavior: "smooth" });
 }
 
 const pendingDeleteSkill = ref<Skill | null>(null);
