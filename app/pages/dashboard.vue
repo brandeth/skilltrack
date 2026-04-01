@@ -16,7 +16,10 @@
         </div>
         <div class="topbar__actions">
           <ThemeToggle />
-          <ActionDropdown @select="handleDropdownSelect" />
+          <ActionDropdown
+            :include-sign-out="showMobileSignOut"
+            @select="handleDropdownSelect"
+          />
           <button
             v-if="isAuthenticated"
             class="btn btn--secondary topbar__signout"
@@ -90,18 +93,18 @@
             </div>
             <div class="hero-panel__actions">
               <button
-                class="btn btn--secondary"
-                type="button"
-                @click="skillDialogOpen = true"
-              >
-                + Add skill
-              </button>
-              <button
                 class="btn btn--primary"
                 type="button"
                 @click="sessionDialogOpen = true"
               >
                 Log session
+              </button>
+              <button
+                class="btn btn--secondary"
+                type="button"
+                @click="skillDialogOpen = true"
+              >
+                + Add skill
               </button>
             </div>
           </div>
@@ -196,89 +199,6 @@
         </section>
 
         <section class="bento-grid" aria-label="Dashboard widgets">
-          <article class="panel panel--heatmap" aria-labelledby="heatmap-title">
-            <div class="panel__header">
-              <div>
-                <div class="panel__eyebrow">Consistency view</div>
-                <h2 id="heatmap-title" class="panel__title">90-day heatmap</h2>
-              </div>
-            </div>
-
-            <div class="heatmap-block">
-              <p
-                class="helper-text"
-                :aria-live="skills.length ? 'polite' : 'off'"
-              >
-                {{ heatmap.summaryText }}
-              </p>
-
-              <div class="heatmap-shell">
-                <div class="heatmap-weekdays">
-                  <span>M</span>
-                  <span>W</span>
-                  <span>F</span>
-                </div>
-                <div
-                  class="heatmap-grid"
-                  role="grid"
-                  aria-label="90-day practice heatmap"
-                >
-                  <template
-                    v-for="(day, index) in heatmap.days"
-                    :key="day?.dateKey ?? `blank-${index}`"
-                  >
-                    <div
-                      v-if="day"
-                      class="heatmap-cell"
-                      :data-bucket="day.bucket"
-                      :data-today="day.isToday ? 'true' : 'false'"
-                      :title="day.summary"
-                      :aria-label="day.summary"
-                      role="gridcell"
-                      :style="{ '--cell-index': index }"
-                    />
-                    <div
-                      v-else
-                      class="heatmap-cell--blank"
-                      role="gridcell"
-                      aria-hidden="true"
-                    />
-                  </template>
-                </div>
-              </div>
-
-              <div class="heatmap-legend">
-                <span>{{ heatmap.activeDays }} active days in the last 90</span>
-                <div class="legend-scale" aria-hidden="true">
-                  <span>Less</span>
-                  <span
-                    class="legend-scale__cell"
-                    style="background: var(--color-heatmap-empty)"
-                  ></span>
-                  <span
-                    class="legend-scale__cell"
-                    style="background: var(--color-heatmap-light)"
-                  ></span>
-                  <span
-                    class="legend-scale__cell"
-                    style="background: var(--color-heatmap-medium)"
-                  ></span>
-                  <span
-                    class="legend-scale__cell"
-                    style="background: var(--color-heatmap-heavy)"
-                  ></span>
-                  <span>More</span>
-                </div>
-              </div>
-
-              <ul class="sr-only">
-                <li v-for="day in heatmap.accessibleItems" :key="day.dateKey">
-                  {{ day.summary }}
-                </li>
-              </ul>
-            </div>
-          </article>
-
           <article
             class="panel panel--featured"
             :style="{ '--skill-accent': featuredSkill?.skill.color }"
@@ -358,6 +278,76 @@
             <p v-else class="helper-text">
               Create a skill and log a session to unlock your dashboard
               highlights.
+            </p>
+          </article>
+
+          <article class="panel panel--recent" aria-labelledby="recent-title">
+            <div class="panel__header">
+              <div>
+                <div class="panel__eyebrow">Momentum log</div>
+                <h2 id="recent-title" class="panel__title">Recent sessions</h2>
+              </div>
+            </div>
+
+            <ul v-if="recentSessions.length" class="recent-list">
+              <li
+                v-for="session in recentSessions"
+                :key="session.id"
+                class="session-item"
+              >
+                <div class="session-item__summary">
+                  <div class="session-item__title-row">
+                    <span class="session-item__title-group">
+                      <span
+                        class="skill-swatch"
+                        :style="{ backgroundColor: session.skillColor }"
+                        aria-hidden="true"
+                      />
+                      <strong>{{ session.skillName }}</strong>
+                    </span>
+                  </div>
+                  <div class="session-item__meta">
+                    {{ formatMinutes(session.durationMinutes) }} on
+                    {{ formatDateLong(session.date) }}
+                  </div>
+                </div>
+                <button
+                  class="btn btn--sm btn--danger session-item__delete"
+                  type="button"
+                  aria-label="Delete session"
+                  @click="confirmDeleteSession(session)"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                </button>
+                <p v-if="session.notes" class="session-item__notes">
+                  {{ session.notes }}
+                </p>
+                <p v-else class="session-item__notes">
+                  No notes for this session.
+                </p>
+              </li>
+            </ul>
+
+            <p v-else class="helper-text">
+              Log a session to start your recent activity feed.
             </p>
           </article>
 
@@ -442,16 +432,16 @@
                   <button
                     class="btn btn--sm btn--secondary"
                     type="button"
-                    @click="confirmDeleteSkill(summary.skill)"
+                    @click="restartStreak(summary.skill)"
                   >
-                    Delete
+                    Restart streak ↗
                   </button>
                   <button
                     class="btn btn--sm btn--secondary"
                     type="button"
-                    @click="restartStreak(summary.skill)"
+                    @click="confirmDeleteSkill(summary.skill)"
                   >
-                    Restart streak ↗
+                    Delete
                   </button>
                 </div>
               </li>
@@ -462,72 +452,87 @@
             </p>
           </article>
 
-          <article class="panel panel--recent" aria-labelledby="recent-title">
+          <article class="panel panel--heatmap" aria-labelledby="heatmap-title">
             <div class="panel__header">
               <div>
-                <div class="panel__eyebrow">Momentum log</div>
-                <h2 id="recent-title" class="panel__title">Recent sessions</h2>
+                <div class="panel__eyebrow">Consistency view</div>
+                <h2 id="heatmap-title" class="panel__title">90-day heatmap</h2>
               </div>
             </div>
 
-            <ul v-if="recentSessions.length" class="recent-list">
-              <li
-                v-for="session in recentSessions"
-                :key="session.id"
-                class="session-item"
+            <div class="heatmap-block">
+              <p
+                class="helper-text"
+                :aria-live="skills.length ? 'polite' : 'off'"
               >
-                <div class="session-item__title-row">
-                  <span class="session-item__title-group">
-                    <span
-                      class="skill-swatch"
-                      :style="{ backgroundColor: session.skillColor }"
+                {{ heatmap.summaryText }}
+              </p>
+
+              <div class="heatmap-shell">
+                <div class="heatmap-weekdays">
+                  <span>M</span>
+                  <span>W</span>
+                  <span>F</span>
+                </div>
+                <div
+                  class="heatmap-grid"
+                  role="grid"
+                  aria-label="90-day practice heatmap"
+                >
+                  <template
+                    v-for="(day, index) in heatmap.days"
+                    :key="day?.dateKey ?? `blank-${index}`"
+                  >
+                    <div
+                      v-if="day"
+                      class="heatmap-cell"
+                      :data-bucket="day.bucket"
+                      :data-today="day.isToday ? 'true' : 'false'"
+                      :title="day.summary"
+                      :aria-label="day.summary"
+                      role="gridcell"
+                      :style="{ '--cell-index': index }"
+                    />
+                    <div
+                      v-else
+                      class="heatmap-cell--blank"
+                      role="gridcell"
                       aria-hidden="true"
                     />
-                    <strong>{{ session.skillName }}</strong>
-                  </span>
-                  <button
-                    class="btn btn--sm btn--danger session-item__delete"
-                    type="button"
-                    aria-label="Delete session"
-                    @click="confirmDeleteSession(session)"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path
-                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                      />
-                      <line x1="10" y1="11" x2="10" y2="17" />
-                      <line x1="14" y1="11" x2="14" y2="17" />
-                    </svg>
-                  </button>
+                  </template>
                 </div>
-                <div class="session-item__meta">
-                  {{ formatMinutes(session.durationMinutes) }} on
-                  {{ formatDateLong(session.date) }}
-                </div>
-                <p v-if="session.notes" class="session-item__notes">
-                  {{ session.notes }}
-                </p>
-                <p v-else class="session-item__notes">
-                  No notes for this session.
-                </p>
-              </li>
-            </ul>
+              </div>
 
-            <p v-else class="helper-text">
-              Log a session to start your recent activity feed.
-            </p>
+              <div class="heatmap-legend">
+                <span>{{ heatmap.activeDays }} active days in the last 90</span>
+                <div class="legend-scale" aria-hidden="true">
+                  <span>Less</span>
+                  <span
+                    class="legend-scale__cell"
+                    style="background: var(--color-heatmap-empty)"
+                  ></span>
+                  <span
+                    class="legend-scale__cell"
+                    style="background: var(--color-heatmap-light)"
+                  ></span>
+                  <span
+                    class="legend-scale__cell"
+                    style="background: var(--color-heatmap-medium)"
+                  ></span>
+                  <span
+                    class="legend-scale__cell"
+                    style="background: var(--color-heatmap-heavy)"
+                  ></span>
+                  <span>More</span>
+                </div>
+              </div>
+
+              <ul class="sr-only">
+                <li v-for="day in heatmap.accessibleItems" :key="day.dateKey">
+                  {{ day.summary }}
+                </li>
+              </ul>
+            </div>
           </article>
         </section>
       </div>
@@ -811,6 +816,11 @@ import type {
 const user = useSupabaseUser();
 const isAuthenticated = computed(() => !!user.value);
 const supabaseClient = useSupabaseClient();
+const mobileActionsQuery = "(max-width: 47.999rem)";
+const isMobileViewport = ref(false);
+const showMobileSignOut = computed(
+  () => isAuthenticated.value && isMobileViewport.value,
+);
 
 async function handleSignOut() {
   await supabaseClient.auth.signOut();
@@ -872,6 +882,11 @@ const orbPulsing = ref(false);
 let orbRaf = 0;
 let prevX = 0;
 let prevY = 0;
+let mobileViewportMediaQuery: MediaQueryList | null = null;
+
+function updateMobileViewport(event?: MediaQueryList | MediaQueryListEvent) {
+  isMobileViewport.value = event?.matches ?? false;
+}
 
 function clamp(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val));
@@ -977,10 +992,15 @@ onMounted(() => {
     pickWanderGoal();
   }
   orbRaf = requestAnimationFrame(orbLoop);
+
+  mobileViewportMediaQuery = window.matchMedia(mobileActionsQuery);
+  updateMobileViewport(mobileViewportMediaQuery);
+  mobileViewportMediaQuery.addEventListener("change", updateMobileViewport);
 });
 
 onUnmounted(() => {
   cancelAnimationFrame(orbRaf);
+  mobileViewportMediaQuery?.removeEventListener("change", updateMobileViewport);
 });
 
 const greeting = computed(() => {
@@ -1050,12 +1070,18 @@ function skillStreakLabel(summary: SkillSummary) {
     : "No streak yet";
 }
 
-function handleDropdownSelect(action: "session" | "skill") {
+async function handleDropdownSelect(action: "session" | "skill" | "signout") {
   if (action === "session") {
     sessionDialogOpen.value = true;
-  } else {
-    skillDialogOpen.value = true;
+    return;
   }
+
+  if (action === "skill") {
+    skillDialogOpen.value = true;
+    return;
+  }
+
+  await handleSignOut();
 }
 
 watch(sessionDialogOpen, (open) => {

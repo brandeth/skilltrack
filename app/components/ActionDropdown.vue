@@ -1,6 +1,17 @@
 <script setup lang="ts">
+type ActionValue = "session" | "skill" | "signout";
+
+const props = withDefaults(
+  defineProps<{
+    includeSignOut?: boolean;
+  }>(),
+  {
+    includeSignOut: false,
+  },
+);
+
 const emit = defineEmits<{
-  select: [action: "session" | "skill"];
+  select: [action: ActionValue];
 }>();
 
 const isOpen = ref(false);
@@ -8,18 +19,30 @@ const triggerRef = ref<HTMLElement | null>(null);
 const menuRef = ref<HTMLElement | null>(null);
 const focusedIndex = ref(-1);
 
-const items = [
-  {
-    value: "session" as const,
-    label: "Log Session",
-    sublabel: "Quick action",
-  },
-  {
-    value: "skill" as const,
-    label: "Create Skill",
-    sublabel: "Recovery path",
-  },
-];
+const items = computed(() => {
+  const baseItems = [
+    {
+      value: "session" as const,
+      label: "Log session",
+      sublabel: "Quick action",
+    },
+    {
+      value: "skill" as const,
+      label: "Create skill",
+      sublabel: "Recovery path",
+    },
+  ];
+
+  if (props.includeSignOut) {
+    baseItems.push({
+      value: "signout" as const,
+      label: "Sign out",
+      sublabel: "Account action",
+    });
+  }
+
+  return baseItems;
+});
 
 function toggle() {
   isOpen.value = !isOpen.value;
@@ -35,7 +58,7 @@ function close() {
   triggerRef.value?.focus();
 }
 
-function selectItem(value: "session" | "skill") {
+function selectItem(value: ActionValue) {
   emit("select", value);
   close();
 }
@@ -47,20 +70,22 @@ function focusMenuItem(index: number) {
 }
 
 function onMenuKeydown(e: KeyboardEvent) {
+  const itemCount = items.value.length;
+
   if (e.key === "ArrowDown") {
     e.preventDefault();
-    focusedIndex.value = (focusedIndex.value + 1) % items.length;
+    focusedIndex.value = (focusedIndex.value + 1) % itemCount;
     focusMenuItem(focusedIndex.value);
   } else if (e.key === "ArrowUp") {
     e.preventDefault();
-    focusedIndex.value = (focusedIndex.value - 1 + items.length) % items.length;
+    focusedIndex.value = (focusedIndex.value - 1 + itemCount) % itemCount;
     focusMenuItem(focusedIndex.value);
   } else if (e.key === "Escape") {
     close();
   } else if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
     if (focusedIndex.value >= 0) {
-      selectItem(items[focusedIndex.value]!.value);
+      selectItem(items.value[focusedIndex.value]!.value);
     }
   }
 }
@@ -90,11 +115,11 @@ onUnmounted(() => {
       type="button"
       aria-haspopup="true"
       :aria-expanded="isOpen"
-      aria-label="New action"
+      aria-label="Quick actions"
       @click="toggle"
     >
       <span class="action-trigger__icon" aria-hidden="true">+</span>
-      <span class="action-trigger__label">New</span>
+      <span class="action-trigger__label">Actions</span>
       <svg
         class="action-trigger__chevron"
         width="12"
@@ -123,7 +148,10 @@ onUnmounted(() => {
       <button
         v-for="item in items"
         :key="item.value"
-        class="action-menu__item"
+        :class="[
+          'action-menu__item',
+          { 'action-menu__item--danger': item.value === 'signout' },
+        ]"
         role="menuitem"
         tabindex="-1"
         @click="selectItem(item.value)"
@@ -144,7 +172,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  height: 2.5rem;
+  min-height: 2.75rem;
   padding: 0 var(--space-4);
   border: none;
   border-radius: var(--radius-md);
@@ -192,6 +220,7 @@ onUnmounted(() => {
   display: grid;
   gap: 0.125rem;
   width: 100%;
+  min-height: 2.75rem;
   padding: var(--space-3) var(--space-4);
   border: none;
   border-radius: var(--radius-md);
@@ -212,12 +241,16 @@ onUnmounted(() => {
   font-weight: var(--font-medium);
 }
 
+.action-menu__item--danger {
+  color: var(--color-error);
+}
+
 .action-menu__item-sublabel {
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
 
-@media (max-width: 52rem) {
+@media (max-width: 47.999rem) {
   .action-trigger__label,
   .action-trigger__chevron {
     display: none;
@@ -225,7 +258,7 @@ onUnmounted(() => {
 
   .action-trigger {
     padding: 0 var(--space-3);
-    min-width: 2.5rem;
+    min-width: 2.75rem;
     justify-content: center;
   }
 }
