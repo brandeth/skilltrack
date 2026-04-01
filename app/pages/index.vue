@@ -525,7 +525,7 @@ const heatmapBuckets = [
 
 .features__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-6);
   text-align: left;
 }
@@ -629,7 +629,196 @@ const heatmapBuckets = [
 
 /* ── Responsive ────────────────────────────────────── */
 
-@media (max-width: 52rem) {
+@media (max-width: 79.999rem) {
+  .features__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 46rem;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 64rem) and (max-width: 80rem) {
+  .hero__inner {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.06fr);
+    gap: var(--space-10);
+  }
+
+  .hero__content {
+    max-width: 35rem;
+  }
+
+  .hero__subtitle {
+    max-width: 42ch;
+  }
+
+  .hero__visual {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .hero-showcase {
+    width: min(100%, 35rem);
+  }
+}
+
+@media (min-width: 58.001rem) and (max-width: 63.999rem) {
+  .hero__inner {
+    grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+    gap: var(--space-8);
+    align-items: start;
+  }
+
+  .hero__content,
+  .hero__visual {
+    align-self: start;
+  }
+
+  .hero__content {
+    max-width: 33rem;
+  }
+
+  .hero__subtitle {
+    max-width: 37ch;
+  }
+
+  .hero__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .hero__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .hero__visual {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .hero-showcase {
+    width: min(100%, 32rem);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+
+  .showcase-card--streak,
+  .showcase-card--heatmap {
+    grid-column: 1 / -1;
+  }
+
+  .showcase-card--streak {
+    min-height: 10.5rem;
+  }
+
+  .showcase-card--hours {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 12.5rem;
+  }
+
+  .showcase-card--ring {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 12.5rem;
+  }
+
+  .showcase-card--heatmap {
+    min-height: 11rem;
+  }
+
+  .showcase-card--ring .showcase-ring {
+    width: 112px;
+    height: 112px;
+  }
+
+  .features__grid {
+    grid-auto-rows: 1fr;
+    align-items: stretch;
+    max-width: 48rem;
+    margin: 0 auto;
+  }
+
+  .feature-card {
+    height: 100%;
+  }
+}
+
+@media (min-width: 48rem) and (max-width: 58rem) {
+  .hero__inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+
+  .hero__content {
+    width: min(100%, 36rem);
+    max-width: 36rem;
+    margin: 0 auto;
+    justify-self: center;
+  }
+
+  .hero__subtitle {
+    max-width: 40ch;
+  }
+
+  .hero__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .hero__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .hero__visual {
+    justify-self: center;
+    width: 100%;
+  }
+
+  .hero-showcase {
+    width: min(100%, 32rem);
+    margin: 0 auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+
+  .showcase-card--streak,
+  .showcase-card--heatmap {
+    grid-column: 1 / -1;
+  }
+
+  .showcase-card--streak {
+    min-height: 10.5rem;
+  }
+
+  .showcase-card--hours {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 12.5rem;
+  }
+
+  .showcase-card--ring {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 12.5rem;
+  }
+
+  .showcase-card--heatmap {
+    min-height: 11rem;
+  }
+
+  .showcase-card--ring .showcase-ring {
+    width: 112px;
+    height: 112px;
+  }
+}
+
+@media (max-width: 47.999rem) {
   .hero__inner {
     grid-template-columns: 1fr;
     gap: var(--space-8);
@@ -650,6 +839,11 @@ const heatmapBuckets = [
 }
 
 @media (max-width: 30rem) {
+  .features__grid {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+
   .hero__actions {
     flex-direction: column;
   }
