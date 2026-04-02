@@ -66,11 +66,17 @@
           @mouseleave="onOrbLeave"
         >
           <div
-            :class="['hero-orb', { 'hero-orb--pulse': orbPulsing }]"
+            v-for="orb in heroOrbs"
+            :key="orb.id"
+            :class="['hero-orb', { 'hero-orb--pulse': orb.pulsing }]"
             aria-hidden="true"
-            :style="{ transform: `translate(${orbPos.x}px, ${orbPos.y}px)` }"
-            @click="onOrbClick"
-            @animationend="orbPulsing = false"
+            :style="{
+              transform: `translate(${orb.x}px, ${orb.y}px) scale(${orb.scale})`,
+              '--hero-orb-color': orb.color,
+              '--hero-orb-opacity': orb.opacity.toString(),
+            }"
+            @click="pulseHeroOrb(orb.id)"
+            @animationend="onOrbPulseEnd(orb.id)"
           />
           <div class="hero-panel__top">
             <div class="stack">
@@ -873,15 +879,33 @@ const sessionDialogOpen = ref(false);
 const skillDialogOpen = ref(false);
 
 const heroPanelRef = ref<HTMLElement | null>(null);
-const orbPos = reactive({ x: 0, y: 0 });
-const orbTarget = reactive({ x: 0, y: 0 });
-const orbGoal = reactive({ x: 0, y: 0 });
-const orbVel = reactive({ x: 0, y: 0 });
+const HERO_ORB_HALF = 112;
+
+interface HeroOrbState {
+  id: string;
+  color: string;
+  seeded: boolean;
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
+  goalX: number;
+  goalY: number;
+  velX: number;
+  velY: number;
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+  opacity: number;
+  steerFactor: number;
+  moveFactor: number;
+  wanderDrift: number;
+  pulsing: boolean;
+}
+
+const heroOrbs = ref<HeroOrbState[]>([]);
 const orbHovered = ref(false);
-const orbPulsing = ref(false);
 let orbRaf = 0;
-let prevX = 0;
-let prevY = 0;
 let mobileViewportMediaQuery: MediaQueryList | null = null;
 
 function updateMobileViewport(event?: MediaQueryList | MediaQueryListEvent) {
@@ -892,35 +916,228 @@ function clamp(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val));
 }
 
-function pickWanderGoal() {
+function getHeroOrbArea() {
   const el = heroPanelRef.value;
-  if (!el) return;
-  const w = el.offsetWidth;
-  const h = el.offsetHeight;
-  orbGoal.x = Math.random() * w - 112;
-  orbGoal.y = Math.random() * h - 112;
+  if (!el) return null;
+
+  const width = el.offsetWidth;
+  const height = el.offsetHeight;
+  const minX = width < 720 ? -HERO_ORB_HALF : width * 0.18 - HERO_ORB_HALF;
+
+  return {
+    width,
+    height,
+    minX,
+    maxX: width - HERO_ORB_HALF,
+    minY: -HERO_ORB_HALF,
+    maxY: height - HERO_ORB_HALF,
+  };
+}
+
+function getHeroOrbProfile(index: number, total: number) {
+  const angle = (index / Math.max(total, 1)) * Math.PI * 2;
+  const radius = 28 + (index % 4) * 18;
+
+  return {
+    offsetX: Math.cos(angle) * radius,
+    offsetY: Math.sin(angle) * radius * 0.65,
+    scale: Math.max(0.62, 1 - index * 0.035),
+    opacity: Math.max(0.16, 0.44 - index * 0.012),
+    steerFactor: 0.005 + (index % 4) * 0.00045,
+    moveFactor: 0.0012 + (index % 5) * 0.0002,
+    wanderDrift: 220 + (index % 4) * 32,
+  };
+}
+
+function getInitialHeroOrbPosition(
+  index: number,
+  total: number,
+  area = getHeroOrbArea(),
+) {
+  if (!area) {
+    return { x: 0, y: 0 };
+  }
+
+  const xMin = area.width < 720 ? area.minX : Math.max(area.minX, area.width * 0.42 - HERO_ORB_HALF);
+  const xMax = area.maxX;
+  const yMin = area.width < 720 ? Math.max(area.minY, area.height * 0.22 - HERO_ORB_HALF) : area.minY;
+  const yMax = area.width < 720 ? Math.min(area.maxY, area.height * 0.84 - HERO_ORB_HALF) : Math.min(area.maxY, area.height * 0.76 - HERO_ORB_HALF);
+  const contentExclusion = area.width < 720
+    ? {
+        minX: area.width * 0.06 - HERO_ORB_HALF,
+        maxX: area.width * 0.94 - HERO_ORB_HALF,
+        minY: area.height * 0.02 - HERO_ORB_HALF,
+        maxY: area.height * 0.34 - HERO_ORB_HALF,
+      }
+    : {
+        minX: area.width * 0.02 - HERO_ORB_HALF,
+        maxX: area.width * 0.58 - HERO_ORB_HALF,
+        minY: area.height * 0.02 - HERO_ORB_HALF,
+        maxY: area.height * 0.44 - HERO_ORB_HALF,
+      };
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const x = xMin + Math.random() * Math.max(xMax - xMin, 0);
+    const y = yMin + Math.random() * Math.max(yMax - yMin, 0);
+    const overlapsContent =
+      x < contentExclusion.maxX &&
+      x + HERO_ORB_HALF * 2 > contentExclusion.minX &&
+      y < contentExclusion.maxY &&
+      y + HERO_ORB_HALF * 2 > contentExclusion.minY;
+
+    if (!overlapsContent) {
+      return {
+        x: clamp(x, area.minX, area.maxX),
+        y: clamp(y, area.minY, area.maxY),
+      };
+    }
+  }
+
+  const fallbackProgress = total <= 1 ? 0.5 : index / Math.max(total - 1, 1);
+
+  return {
+    x: clamp(xMin + (xMax - xMin) * (0.2 + fallbackProgress * 0.6), area.minX, area.maxX),
+    y: clamp(yMin + (yMax - yMin) * (0.3 + Math.random() * 0.4), area.minY, area.maxY),
+  };
+}
+
+function pickWanderGoal(orb: HeroOrbState, index: number, total: number) {
+  const area = getHeroOrbArea();
+  if (!area) return;
+
+  const angle = Math.random() * Math.PI * 2;
+  const radiusX = Math.max(area.width * 0.14, 72) + (index % 3) * 20;
+  const radiusY = Math.max(area.height * 0.18, 64) + (index % 2) * 18;
+  const centerX = area.width * (area.width < 720 ? 0.5 : 0.72);
+  const centerY = area.height * (area.width < 720 ? 0.46 : 0.36);
+
+  orb.goalX = clamp(
+    centerX + Math.cos(angle) * radiusX - HERO_ORB_HALF,
+    area.minX,
+    area.maxX,
+  );
+  orb.goalY = clamp(
+    centerY + Math.sin(angle) * radiusY - HERO_ORB_HALF,
+    area.minY,
+    area.maxY,
+  );
 }
 
 function pickWanderGoalFromHeading() {
-  const el = heroPanelRef.value;
-  if (!el) return;
-  const w = el.offsetWidth;
-  const h = el.offsetHeight;
-  const speed = Math.sqrt(orbVel.x ** 2 + orbVel.y ** 2);
-  const drift = 300 + Math.random() * 200;
-  if (speed > 0.05) {
-    const nx = orbVel.x / speed;
-    const ny = orbVel.y / speed;
-    const spread = (Math.random() - 0.5) * 1.2;
-    const cos = Math.cos(spread);
-    const sin = Math.sin(spread);
-    const dx = nx * cos - ny * sin;
-    const dy = nx * sin + ny * cos;
-    orbGoal.x = clamp(orbPos.x + dx * drift, -112, w - 112);
-    orbGoal.y = clamp(orbPos.y + dy * drift, -112, h - 112);
-  } else {
-    pickWanderGoal();
+  const area = getHeroOrbArea();
+  if (!area) return;
+
+  const orbCount = heroOrbs.value.length;
+  if (!orbCount) return;
+
+  const centroid = heroOrbs.value.reduce(
+    (sum, orb) => {
+      sum.x += orb.x + HERO_ORB_HALF;
+      sum.y += orb.y + HERO_ORB_HALF;
+      return sum;
+    },
+    { x: 0, y: 0 },
+  );
+  centroid.x /= orbCount;
+  centroid.y /= orbCount;
+
+  const dispersionDistance = Math.max(Math.min(area.width, area.height) * 0.18, 120);
+  const dispersionStep = Math.max(Math.min(area.width, area.height) * 0.028, 18);
+
+  heroOrbs.value.forEach((orb, index) => {
+    const orbCenterX = orb.x + HERO_ORB_HALF;
+    const orbCenterY = orb.y + HERO_ORB_HALF;
+    let dx = orbCenterX - centroid.x;
+    let dy = orbCenterY - centroid.y;
+    const distance = Math.sqrt(dx ** 2 + dy ** 2);
+
+    if (distance > 1) {
+      dx /= distance;
+      dy /= distance;
+    } else {
+      const fallbackAngle = Math.atan2(orb.offsetY, orb.offsetX) || (index / Math.max(orbCount, 1)) * Math.PI * 2;
+      dx = Math.cos(fallbackAngle);
+      dy = Math.sin(fallbackAngle);
+    }
+
+    const targetRadius = Math.max(distance, 28) + dispersionDistance + (index % 3) * dispersionStep;
+    orb.goalX = clamp(centroid.x + dx * targetRadius - HERO_ORB_HALF, area.minX, area.maxX);
+    orb.goalY = clamp(centroid.y + dy * targetRadius - HERO_ORB_HALF, area.minY, area.maxY);
+  });
+}
+
+function syncHeroOrbs() {
+  const existingOrbs = new Map(heroOrbs.value.map((orb) => [orb.id, orb]));
+  const total = skills.value.length;
+  const area = getHeroOrbArea();
+
+  heroOrbs.value = skills.value.map((skill, index) => {
+    const profile = getHeroOrbProfile(index, total);
+    const existingOrb = existingOrbs.get(skill.id);
+
+    if (existingOrb) {
+      existingOrb.color = skill.color;
+      existingOrb.offsetX = profile.offsetX;
+      existingOrb.offsetY = profile.offsetY;
+      existingOrb.scale = profile.scale;
+      existingOrb.opacity = profile.opacity;
+      existingOrb.steerFactor = profile.steerFactor;
+      existingOrb.moveFactor = profile.moveFactor;
+      existingOrb.wanderDrift = profile.wanderDrift;
+
+      if (!existingOrb.seeded && area) {
+        const initialPosition = getInitialHeroOrbPosition(index, total, area);
+
+        existingOrb.x = initialPosition.x;
+        existingOrb.y = initialPosition.y;
+        existingOrb.targetX = initialPosition.x;
+        existingOrb.targetY = initialPosition.y;
+        existingOrb.goalX = initialPosition.x;
+        existingOrb.goalY = initialPosition.y;
+        existingOrb.seeded = true;
+      }
+
+      return existingOrb;
+    }
+
+    const initialPosition = getInitialHeroOrbPosition(index, total, area);
+
+    return {
+      id: skill.id,
+      color: skill.color,
+      seeded: Boolean(area),
+      x: initialPosition.x,
+      y: initialPosition.y,
+      targetX: initialPosition.x,
+      targetY: initialPosition.y,
+      goalX: initialPosition.x,
+      goalY: initialPosition.y,
+      velX: 0,
+      velY: 0,
+      pulsing: false,
+      ...profile,
+    };
+  });
+
+  if (!orbHovered.value) {
+    heroOrbs.value.forEach((orb, index) => {
+      pickWanderGoal(orb, index, total);
+    });
   }
+}
+
+function pulseHeroOrb(orbId: string) {
+  const orb = heroOrbs.value.find((item) => item.id === orbId);
+  if (!orb) return;
+
+  orb.pulsing = false;
+
+  requestAnimationFrame(() => {
+    const nextOrb = heroOrbs.value.find((item) => item.id === orbId);
+    if (nextOrb) {
+      nextOrb.pulsing = true;
+    }
+  });
 }
 
 function lerp(a: number, b: number, t: number) {
@@ -928,26 +1145,29 @@ function lerp(a: number, b: number, t: number) {
 }
 
 function orbLoop() {
-  const steerFactor = 0.006;
-  orbTarget.x = lerp(orbTarget.x, orbGoal.x, steerFactor);
-  orbTarget.y = lerp(orbTarget.y, orbGoal.y, steerFactor);
+  heroOrbs.value.forEach((orb, index) => {
+    orb.targetX = lerp(orb.targetX, orb.goalX, orb.steerFactor);
+    orb.targetY = lerp(orb.targetY, orb.goalY, orb.steerFactor);
 
-  const moveFactor = orbHovered.value ? 0.004 : 0.0015;
-  orbPos.x = lerp(orbPos.x, orbTarget.x, moveFactor);
-  orbPos.y = lerp(orbPos.y, orbTarget.y, moveFactor);
+    const moveFactor = orbHovered.value
+      ? Math.min(orb.moveFactor * 2.8, 0.004)
+      : orb.moveFactor;
+    const nextX = lerp(orb.x, orb.targetX, moveFactor);
+    const nextY = lerp(orb.y, orb.targetY, moveFactor);
 
-  orbVel.x = orbPos.x - prevX;
-  orbVel.y = orbPos.y - prevY;
-  prevX = orbPos.x;
-  prevY = orbPos.y;
+    orb.velX = nextX - orb.x;
+    orb.velY = nextY - orb.y;
+    orb.x = nextX;
+    orb.y = nextY;
 
-  if (
-    !orbHovered.value &&
-    Math.abs(orbTarget.x - orbGoal.x) < 5 &&
-    Math.abs(orbTarget.y - orbGoal.y) < 5
-  ) {
-    pickWanderGoal();
-  }
+    if (
+      !orbHovered.value &&
+      Math.abs(orb.targetX - orb.goalX) < 5 &&
+      Math.abs(orb.targetY - orb.goalY) < 5
+    ) {
+      pickWanderGoal(orb, index, heroOrbs.value.length);
+    }
+  });
 
   orbRaf = requestAnimationFrame(orbLoop);
 }
@@ -961,10 +1181,17 @@ function onOrbEnter() {
 
 function onOrbMove(e: MouseEvent) {
   const el = heroPanelRef.value;
-  if (!el) return;
+  const area = getHeroOrbArea();
+  if (!el || !area) return;
+
   const rect = el.getBoundingClientRect();
-  orbGoal.x = e.clientX - rect.left - 112;
-  orbGoal.y = e.clientY - rect.top - 112;
+  const baseX = e.clientX - rect.left - HERO_ORB_HALF;
+  const baseY = e.clientY - rect.top - HERO_ORB_HALF;
+
+  heroOrbs.value.forEach((orb) => {
+    orb.goalX = clamp(baseX + orb.offsetX, area.minX, area.maxX);
+    orb.goalY = clamp(baseY + orb.offsetY, area.minY, area.maxY);
+  });
 }
 
 function onOrbLeave() {
@@ -974,23 +1201,25 @@ function onOrbLeave() {
   }, 800);
 }
 
-function onOrbClick() {
-  orbPulsing.value = false;
-  void document.querySelector(".hero-orb")?.offsetWidth;
-  orbPulsing.value = true;
+function onOrbPulseEnd(orbId: string) {
+  const orb = heroOrbs.value.find((item) => item.id === orbId);
+  if (orb) {
+    orb.pulsing = false;
+  }
+}
+
+async function syncHeroOrbsAfterRender() {
+  await nextTick();
+
+  if (!hydrated.value || !heroPanelRef.value) {
+    return;
+  }
+
+  syncHeroOrbs();
 }
 
 onMounted(() => {
-  const el = heroPanelRef.value;
-  if (el) {
-    orbPos.x = el.offsetWidth - 112;
-    orbPos.y = el.offsetHeight - 112;
-    orbTarget.x = orbPos.x;
-    orbTarget.y = orbPos.y;
-    prevX = orbPos.x;
-    prevY = orbPos.y;
-    pickWanderGoal();
-  }
+  syncHeroOrbs();
   orbRaf = requestAnimationFrame(orbLoop);
 
   mobileViewportMediaQuery = window.matchMedia(mobileActionsQuery);
@@ -999,9 +1228,30 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  clearTimeout(orbLeaveTimeout);
   cancelAnimationFrame(orbRaf);
   mobileViewportMediaQuery?.removeEventListener("change", updateMobileViewport);
 });
+
+watch(
+  () => skills.value.map((skill) => `${skill.id}:${skill.color}`),
+  () => {
+    syncHeroOrbs();
+  },
+  { immediate: true },
+);
+
+watch(
+  [hydrated, heroPanelRef],
+  ([isHydrated, heroPanel]) => {
+    if (!isHydrated || !heroPanel) {
+      return;
+    }
+
+    void syncHeroOrbsAfterRender();
+  },
+  { flush: "post" },
+);
 
 const greeting = computed(() => {
   const hour = new Date().getHours();
