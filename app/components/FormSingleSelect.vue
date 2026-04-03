@@ -512,6 +512,8 @@ onUnmounted(() => {
 <style scoped>
 .listbox-select {
   position: relative;
+  width: 100%;
+  min-width: 0;
 }
 
 .listbox-select__trigger {

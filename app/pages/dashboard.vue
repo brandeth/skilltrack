@@ -672,7 +672,11 @@
       title="Create a skill"
       eyebrow="Recovery path"
     >
-      <form class="form" @submit.prevent="handleAddSkill">
+      <form
+        id="create-skill-form"
+        class="form"
+        @submit.prevent="handleAddSkill"
+      >
         <div
           v-if="skillCreate.status.error"
           class="status-message status-message--error"
@@ -701,28 +705,21 @@
           />
         </div>
 
-        <div class="field-row">
-          <div class="field">
-            <label for="dialog-skill-color">Accent color</label>
-            <select id="dialog-skill-color" v-model="skillCreate.form.color">
-              <option
-                v-for="color in skillCreate.availableColors"
-                :key="color"
-                :value="color"
-              >
-                {{ color }}
-              </option>
-            </select>
-          </div>
+        <div class="field-row skill-form-row">
+          <FormSingleSelect
+            v-model="skillCreate.form.color"
+            input-id="dialog-skill-color"
+            label="Accent color"
+            :options="skillColorOptions"
+            required
+          />
 
-          <div class="field">
-            <label for="dialog-goal-type">Goal type</label>
-            <select id="dialog-goal-type" v-model="skillCreate.form.goalType">
-              <option value="">No goal yet</option>
-              <option value="weekly">Weekly</option>
-              <option value="total">Total hours</option>
-            </select>
-          </div>
+          <FormSingleSelect
+            v-model="skillCreate.form.goalType"
+            input-id="dialog-goal-type"
+            label="Goal type"
+            :options="skillGoalTypeOptions"
+          />
         </div>
 
         <div class="field">
@@ -736,9 +733,13 @@
             placeholder="5"
           />
         </div>
-
-        <button class="btn btn--secondary" type="submit">Create skill</button>
       </form>
+
+      <template #footer>
+        <button class="btn btn--primary" type="submit" form="create-skill-form">
+          Create skill
+        </button>
+      </template>
     </AppDialog>
 
     <AppDialog
@@ -876,6 +877,18 @@ const sessionSkillOptions = computed(() =>
     color: skill.color,
   })),
 );
+const skillColorOptions = computed(() =>
+  skillCreate.availableColors.map((color) => ({
+    value: color,
+    label: color,
+    color,
+  })),
+);
+const skillGoalTypeOptions = [
+  { value: "", label: "No goal yet" },
+  { value: "weekly", label: "Weekly" },
+  { value: "total", label: "Total hours" },
+];
 
 useHead({
   title: "Dashboard — SkillTrack",
