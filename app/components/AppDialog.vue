@@ -123,6 +123,9 @@ onUnmounted(() => {
           <div class="dialog__body">
             <slot />
           </div>
+          <footer v-if="$slots.footer" class="dialog__footer">
+            <slot name="footer" />
+          </footer>
         </div>
       </div>
     </Transition>
@@ -145,8 +148,9 @@ onUnmounted(() => {
   z-index: 50;
   width: min(32rem, calc(100vw - 2rem));
   max-height: min(85vh, 40rem);
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--color-surface);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
@@ -192,8 +196,20 @@ onUnmounted(() => {
 }
 
 .dialog__body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-3) var(--space-6) var(--space-6);
+}
+
+.dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .dialog-enter-active .dialog-container {

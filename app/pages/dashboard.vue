@@ -549,7 +549,11 @@
       title="Log a session"
       eyebrow="Quick action"
     >
-      <form class="form" @submit.prevent="handleLogSession">
+      <form
+        id="session-log-form"
+        class="form"
+        @submit.prevent="handleLogSession"
+      >
         <div
           v-if="sessionLog.status.error"
           class="status-message status-message--error"
@@ -649,15 +653,18 @@
             placeholder="What clicked, what felt hard, or what to revisit next time?"
           ></textarea>
         </div>
+      </form>
 
+      <template #footer>
         <button
           class="btn btn--primary"
           type="submit"
+          form="session-log-form"
           :disabled="skills.length === 0"
         >
           Save session
         </button>
-      </form>
+      </template>
     </AppDialog>
 
     <AppDialog
