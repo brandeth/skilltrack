@@ -572,23 +572,15 @@
           {{ sessionLog.status.warning }}
         </div>
 
-        <div class="field">
-          <label for="dialog-skillId">Skill</label>
-          <select
-            id="dialog-skillId"
-            v-model="sessionLog.form.skillId"
-            :disabled="skills.length === 0"
-            required
-            aria-required="true"
-          >
-            <option value="" disabled>
-              {{ skills.length ? "Select a skill" : "Add a skill first" }}
-            </option>
-            <option v-for="skill in skills" :key="skill.id" :value="skill.id">
-              {{ skill.name }}
-            </option>
-          </select>
-        </div>
+        <FormSingleSelect
+          v-model="sessionLog.form.skillId"
+          input-id="dialog-skillId"
+          label="Skill"
+          :options="sessionSkillOptions"
+          :placeholder="skills.length ? 'Select a skill' : 'Add a skill first'"
+          :disabled="skills.length === 0"
+          required
+        />
 
         <div class="field-row quick-action-row">
           <div class="field field--duration">
@@ -813,6 +805,7 @@
 </template>
 
 <script setup lang="ts">
+import FormSingleSelect from "~/components/FormSingleSelect.vue";
 import type {
   Skill,
   SkillSummary,
@@ -869,6 +862,13 @@ const animatedBestStreak = useCountUp(computed(() => bestStreak.value.days));
 
 const sessionLog = useSessionForm();
 const skillCreate = useSkillForm();
+const sessionSkillOptions = computed(() =>
+  skills.value.map((skill) => ({
+    value: skill.id,
+    label: skill.name,
+    color: skill.color,
+  })),
+);
 
 useHead({
   title: "Dashboard — SkillTrack",
@@ -958,23 +958,33 @@ function getInitialHeroOrbPosition(
     return { x: 0, y: 0 };
   }
 
-  const xMin = area.width < 720 ? area.minX : Math.max(area.minX, area.width * 0.42 - HERO_ORB_HALF);
+  const xMin =
+    area.width < 720
+      ? area.minX
+      : Math.max(area.minX, area.width * 0.42 - HERO_ORB_HALF);
   const xMax = area.maxX;
-  const yMin = area.width < 720 ? Math.max(area.minY, area.height * 0.22 - HERO_ORB_HALF) : area.minY;
-  const yMax = area.width < 720 ? Math.min(area.maxY, area.height * 0.84 - HERO_ORB_HALF) : Math.min(area.maxY, area.height * 0.76 - HERO_ORB_HALF);
-  const contentExclusion = area.width < 720
-    ? {
-        minX: area.width * 0.06 - HERO_ORB_HALF,
-        maxX: area.width * 0.94 - HERO_ORB_HALF,
-        minY: area.height * 0.02 - HERO_ORB_HALF,
-        maxY: area.height * 0.34 - HERO_ORB_HALF,
-      }
-    : {
-        minX: area.width * 0.02 - HERO_ORB_HALF,
-        maxX: area.width * 0.58 - HERO_ORB_HALF,
-        minY: area.height * 0.02 - HERO_ORB_HALF,
-        maxY: area.height * 0.44 - HERO_ORB_HALF,
-      };
+  const yMin =
+    area.width < 720
+      ? Math.max(area.minY, area.height * 0.22 - HERO_ORB_HALF)
+      : area.minY;
+  const yMax =
+    area.width < 720
+      ? Math.min(area.maxY, area.height * 0.84 - HERO_ORB_HALF)
+      : Math.min(area.maxY, area.height * 0.76 - HERO_ORB_HALF);
+  const contentExclusion =
+    area.width < 720
+      ? {
+          minX: area.width * 0.06 - HERO_ORB_HALF,
+          maxX: area.width * 0.94 - HERO_ORB_HALF,
+          minY: area.height * 0.02 - HERO_ORB_HALF,
+          maxY: area.height * 0.34 - HERO_ORB_HALF,
+        }
+      : {
+          minX: area.width * 0.02 - HERO_ORB_HALF,
+          maxX: area.width * 0.58 - HERO_ORB_HALF,
+          minY: area.height * 0.02 - HERO_ORB_HALF,
+          maxY: area.height * 0.44 - HERO_ORB_HALF,
+        };
 
   for (let attempt = 0; attempt < 12; attempt += 1) {
     const x = xMin + Math.random() * Math.max(xMax - xMin, 0);
@@ -996,8 +1006,16 @@ function getInitialHeroOrbPosition(
   const fallbackProgress = total <= 1 ? 0.5 : index / Math.max(total - 1, 1);
 
   return {
-    x: clamp(xMin + (xMax - xMin) * (0.2 + fallbackProgress * 0.6), area.minX, area.maxX),
-    y: clamp(yMin + (yMax - yMin) * (0.3 + Math.random() * 0.4), area.minY, area.maxY),
+    x: clamp(
+      xMin + (xMax - xMin) * (0.2 + fallbackProgress * 0.6),
+      area.minX,
+      area.maxX,
+    ),
+    y: clamp(
+      yMin + (yMax - yMin) * (0.3 + Math.random() * 0.4),
+      area.minY,
+      area.maxY,
+    ),
   };
 }
 
@@ -1041,8 +1059,14 @@ function pickWanderGoalFromHeading() {
   centroid.x /= orbCount;
   centroid.y /= orbCount;
 
-  const dispersionDistance = Math.max(Math.min(area.width, area.height) * 0.18, 120);
-  const dispersionStep = Math.max(Math.min(area.width, area.height) * 0.028, 18);
+  const dispersionDistance = Math.max(
+    Math.min(area.width, area.height) * 0.18,
+    120,
+  );
+  const dispersionStep = Math.max(
+    Math.min(area.width, area.height) * 0.028,
+    18,
+  );
 
   heroOrbs.value.forEach((orb, index) => {
     const orbCenterX = orb.x + HERO_ORB_HALF;
@@ -1055,14 +1079,27 @@ function pickWanderGoalFromHeading() {
       dx /= distance;
       dy /= distance;
     } else {
-      const fallbackAngle = Math.atan2(orb.offsetY, orb.offsetX) || (index / Math.max(orbCount, 1)) * Math.PI * 2;
+      const fallbackAngle =
+        Math.atan2(orb.offsetY, orb.offsetX) ||
+        (index / Math.max(orbCount, 1)) * Math.PI * 2;
       dx = Math.cos(fallbackAngle);
       dy = Math.sin(fallbackAngle);
     }
 
-    const targetRadius = Math.max(distance, 28) + dispersionDistance + (index % 3) * dispersionStep;
-    orb.goalX = clamp(centroid.x + dx * targetRadius - HERO_ORB_HALF, area.minX, area.maxX);
-    orb.goalY = clamp(centroid.y + dy * targetRadius - HERO_ORB_HALF, area.minY, area.maxY);
+    const targetRadius =
+      Math.max(distance, 28) +
+      dispersionDistance +
+      (index % 3) * dispersionStep;
+    orb.goalX = clamp(
+      centroid.x + dx * targetRadius - HERO_ORB_HALF,
+      area.minX,
+      area.maxX,
+    );
+    orb.goalY = clamp(
+      centroid.y + dy * targetRadius - HERO_ORB_HALF,
+      area.minY,
+      area.maxY,
+    );
   });
 }
 

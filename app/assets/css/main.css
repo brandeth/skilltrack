@@ -210,7 +210,12 @@ button {
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--hero-orb-color, var(--color-accent)) 16%, transparent) 0%,
+    color-mix(
+        in srgb,
+        var(--hero-orb-color, var(--color-accent)) 16%,
+        transparent
+      )
+      0%,
     transparent 70%
   );
   opacity: var(--hero-orb-opacity, 0.42);
@@ -226,13 +231,33 @@ button {
 @keyframes orb-pulse {
   0% {
     box-shadow:
-      0 0 0 0 color-mix(in srgb, var(--hero-orb-color, var(--color-accent)) 30%, transparent),
-      0 0 0 0 color-mix(in srgb, var(--hero-orb-color, var(--color-accent)) 15%, transparent);
+      0 0 0 0
+        color-mix(
+          in srgb,
+          var(--hero-orb-color, var(--color-accent)) 30%,
+          transparent
+        ),
+      0 0 0 0
+        color-mix(
+          in srgb,
+          var(--hero-orb-color, var(--color-accent)) 15%,
+          transparent
+        );
   }
   40% {
     box-shadow:
-      0 0 40px 20px color-mix(in srgb, var(--hero-orb-color, var(--color-accent)) 18%, transparent),
-      0 0 80px 50px color-mix(in srgb, var(--hero-orb-color, var(--color-accent)) 8%, transparent);
+      0 0 40px 20px
+        color-mix(
+          in srgb,
+          var(--hero-orb-color, var(--color-accent)) 18%,
+          transparent
+        ),
+      0 0 80px 50px
+        color-mix(
+          in srgb,
+          var(--hero-orb-color, var(--color-accent)) 8%,
+          transparent
+        );
   }
   100% {
     box-shadow:
