@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { CSSProperties } from "vue";
+
 interface SelectOption {
   value: string;
   label: string;
@@ -35,7 +37,12 @@ const isOpen = ref(false);
 const activeIndex = ref(-1);
 const fallbackId = useId();
 const typeaheadBuffer = ref("");
+const menuStyle = ref<CSSProperties>({});
 let typeaheadTimeout: ReturnType<typeof setTimeout> | null = null;
+let positionRaf: number | null = null;
+
+const MENU_OFFSET = 8;
+const VIEWPORT_PADDING = 12;
 
 const baseId = computed(() => props.inputId || fallbackId);
 const labelId = computed(() => `${baseId.value}-label`);
@@ -78,12 +85,103 @@ watch([isOpen, activeIndex], ([open, index]) => {
   }
 
   nextTick(() => {
-    optionRefs.value[index]?.scrollIntoView({ block: "nearest" });
+    ensureOptionVisible(index);
   });
+});
+
+watch(isOpen, (open) => {
+  if (!import.meta.client) {
+    return;
+  }
+
+  if (open) {
+    window.addEventListener("resize", scheduleMenuPositionUpdate);
+    document.addEventListener("scroll", scheduleMenuPositionUpdate, true);
+
+    nextTick(() => {
+      updateMenuPosition();
+      listboxRef.value?.focus({ preventScroll: true });
+    });
+
+    return;
+  }
+
+  window.removeEventListener("resize", scheduleMenuPositionUpdate);
+  document.removeEventListener("scroll", scheduleMenuPositionUpdate, true);
+
+  if (positionRaf !== null) {
+    window.cancelAnimationFrame(positionRaf);
+    positionRaf = null;
+  }
 });
 
 function getOptionId(index: number) {
   return `${baseId.value}-option-${index}`;
+}
+
+function isTargetInsideSelect(target: Node | null) {
+  if (!target) {
+    return false;
+  }
+
+  return Boolean(
+    rootRef.value?.contains(target) || listboxRef.value?.contains(target),
+  );
+}
+
+function updateMenuPosition() {
+  if (!import.meta.client || !isOpen.value || !triggerRef.value) {
+    return;
+  }
+
+  const rect = triggerRef.value.getBoundingClientRect();
+  const preferredMaxHeight = Math.min(275, window.innerHeight * 0.4);
+  const availableBelow = Math.max(
+    window.innerHeight - rect.bottom - MENU_OFFSET - VIEWPORT_PADDING,
+    0,
+  );
+  const availableAbove = Math.max(rect.top - MENU_OFFSET - VIEWPORT_PADDING, 0);
+  const placeBelow =
+    availableBelow >= preferredMaxHeight || availableBelow >= availableAbove;
+  const availableHeight = placeBelow ? availableBelow : availableAbove;
+  const maxHeight =
+    availableHeight >= 80
+      ? Math.min(preferredMaxHeight, availableHeight)
+      : availableHeight;
+  const width = Math.min(
+    rect.width,
+    Math.max(window.innerWidth - VIEWPORT_PADDING * 2, 0),
+  );
+  const left = Math.min(
+    Math.max(rect.left, VIEWPORT_PADDING),
+    Math.max(window.innerWidth - VIEWPORT_PADDING - width, VIEWPORT_PADDING),
+  );
+
+  menuStyle.value = {
+    position: "fixed",
+    left: `${left}px`,
+    width: `${width}px`,
+    maxHeight: `${maxHeight}px`,
+    top: placeBelow ? `${rect.bottom + MENU_OFFSET}px` : "auto",
+    bottom: placeBelow
+      ? "auto"
+      : `${window.innerHeight - rect.top + MENU_OFFSET}px`,
+  };
+}
+
+function scheduleMenuPositionUpdate() {
+  if (!import.meta.client || !isOpen.value) {
+    return;
+  }
+
+  if (positionRaf !== null) {
+    window.cancelAnimationFrame(positionRaf);
+  }
+
+  positionRaf = window.requestAnimationFrame(() => {
+    positionRaf = null;
+    updateMenuPosition();
+  });
 }
 
 function setOptionRef(el: Element | null, index: number) {
@@ -93,6 +191,29 @@ function setOptionRef(el: Element | null, index: number) {
   }
 
   optionRefs.value[index] = undefined;
+}
+
+function ensureOptionVisible(index: number) {
+  const listbox = listboxRef.value;
+  const option = optionRefs.value[index];
+
+  if (!listbox || !option) {
+    return;
+  }
+
+  const optionTop = option.offsetTop;
+  const optionBottom = optionTop + option.offsetHeight;
+  const viewTop = listbox.scrollTop;
+  const viewBottom = viewTop + listbox.clientHeight;
+
+  if (optionTop < viewTop) {
+    listbox.scrollTop = optionTop;
+    return;
+  }
+
+  if (optionBottom > viewBottom) {
+    listbox.scrollTop = optionBottom - listbox.clientHeight;
+  }
 }
 
 function getInitialIndex(fallbackToLast = false) {
@@ -114,10 +235,6 @@ function openListbox(preferredIndex = getInitialIndex()) {
 
   activeIndex.value = preferredIndex;
   isOpen.value = true;
-
-  nextTick(() => {
-    listboxRef.value?.focus();
-  });
 }
 
 function closeListbox(options: { restoreFocus?: boolean } = {}) {
@@ -130,7 +247,7 @@ function closeListbox(options: { restoreFocus?: boolean } = {}) {
 
   if (options.restoreFocus) {
     nextTick(() => {
-      triggerRef.value?.focus();
+      triggerRef.value?.focus({ preventScroll: true });
     });
   }
 }
@@ -366,7 +483,7 @@ function onListboxKeydown(e: KeyboardEvent) {
 
 function onFocusOut(e: FocusEvent) {
   const nextTarget = e.relatedTarget as Node | null;
-  if (nextTarget && rootRef.value?.contains(nextTarget)) {
+  if (isTargetInsideSelect(nextTarget)) {
     return;
   }
 
@@ -375,7 +492,7 @@ function onFocusOut(e: FocusEvent) {
 
 function onPointerDown(e: PointerEvent) {
   const target = e.target as Node | null;
-  if (target && rootRef.value?.contains(target)) {
+  if (isTargetInsideSelect(target)) {
     return;
   }
 
@@ -388,6 +505,15 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearTypeahead();
+  if (import.meta.client) {
+    window.removeEventListener("resize", scheduleMenuPositionUpdate);
+    document.removeEventListener("scroll", scheduleMenuPositionUpdate, true);
+
+    if (positionRaf !== null) {
+      window.cancelAnimationFrame(positionRaf);
+      positionRaf = null;
+    }
+  }
   document.removeEventListener("pointerdown", onPointerDown);
 });
 </script>
@@ -446,66 +572,74 @@ onUnmounted(() => {
           />
         </svg>
       </button>
+    </div>
 
+    <Teleport to="body">
       <div
         v-if="isOpen"
         :id="listboxId"
         ref="listboxRef"
         class="listbox-select__menu"
+        :style="menuStyle"
         role="listbox"
         tabindex="0"
         :aria-labelledby="labelId"
         :aria-required="required"
         :aria-activedescendant="activeDescendantId"
+        @focusout="onFocusOut"
         @keydown="onListboxKeydown"
       >
-        <div
-          v-for="(option, index) in options"
-          :id="getOptionId(index)"
-          :key="option.value"
-          :ref="(el) => setOptionRef(el, index)"
-          :class="[
-            'listbox-select__option',
-            {
-              'listbox-select__option--active': index === activeIndex,
-              'listbox-select__option--selected': option.value === modelValue,
-            },
-          ]"
-          role="option"
-          :aria-selected="option.value === modelValue"
-          @mouseenter="setActiveIndex(index)"
-          @mousedown.prevent
-          @click="selectOption(option.value)"
-        >
-          <span class="listbox-select__option-label">
-            <span
-              v-if="option.color"
-              class="listbox-select__swatch"
-              :style="{ '--select-swatch-color': option.color }"
-              aria-hidden="true"
-            />
-            <span class="listbox-select__option-text">{{ option.label }}</span>
-          </span>
-
-          <svg
-            class="listbox-select__check"
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            aria-hidden="true"
+        <div style="overflow-y: scroll; max-height: 256px">
+          <div
+            v-for="(option, index) in options"
+            :id="getOptionId(index)"
+            :key="option.value"
+            :ref="(el) => setOptionRef(el, index)"
+            :class="[
+              'listbox-select__option',
+              {
+                'listbox-select__option--active': index === activeIndex,
+                'listbox-select__option--selected': option.value === modelValue,
+              },
+            ]"
+            role="option"
+            :aria-selected="option.value === modelValue"
+            @mouseenter="setActiveIndex(index)"
+            @mousedown.prevent
+            @click="selectOption(option.value)"
           >
-            <path
-              d="M2.5 7.2L5.5 10.2L11.5 4.2"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+            <span class="listbox-select__option-label">
+              <span
+                v-if="option.color"
+                class="listbox-select__swatch"
+                :style="{ '--select-swatch-color': option.color }"
+                aria-hidden="true"
+              />
+              <span class="listbox-select__option-text">{{
+                option.label
+              }}</span>
+            </span>
+
+            <svg
+              class="listbox-select__check"
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              aria-hidden="true"
+            >
+              <path
+                d="M2.5 7.2L5.5 10.2L11.5 4.2"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -591,16 +725,12 @@ onUnmounted(() => {
 }
 
 .listbox-select__menu {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  left: 0;
-  z-index: 20;
+  z-index: 60;
   display: grid;
   gap: var(--space-1);
-  width: 100%;
   max-height: min(16rem, 40vh);
   padding: var(--space-2);
-  overflow-y: auto;
+  /* overflow-y: auto; */
   border: 1px solid color-mix(in srgb, var(--color-border) 92%, transparent);
   border-radius: calc(var(--radius-lg) + 0.125rem);
   background: color-mix(in srgb, var(--color-surface) 96%, transparent);
