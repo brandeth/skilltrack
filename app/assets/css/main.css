@@ -1585,6 +1585,48 @@ button {
 }
 
 @media (min-width: 80rem) {
+  .hero-panel__top {
+    gap: var(--space-6);
+  }
+
+  .hero-summary {
+    flex: 0 0 clamp(24rem, 35vw, 31rem);
+    grid-template-columns: minmax(0, 1.3fr) minmax(12rem, 0.95fr);
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .hero-streak-card {
+    height: 100%;
+    padding: var(--space-5);
+    align-content: start;
+  }
+
+  .hero-panel__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-content: center;
+    align-self: stretch;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-surface) 90%, transparent),
+      color-mix(in srgb, var(--color-accent-subtle) 38%, transparent)
+    );
+    white-space: normal;
+  }
+
+  .hero-panel__actions .btn {
+    width: 100%;
+    min-height: 3rem;
+  }
+}
+
+@media (min-width: 80rem) {
   .featured-card__hero {
     grid-template-columns: auto auto auto;
   }
