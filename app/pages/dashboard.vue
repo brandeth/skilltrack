@@ -41,10 +41,10 @@
       >
         <div class="skeleton skeleton--hero" />
         <div class="bento-grid">
-          <div class="skeleton" style="grid-column: span 6" />
-          <div class="skeleton" style="grid-column: span 6" />
-          <div class="skeleton" style="grid-column: span 6" />
-          <div class="skeleton" style="grid-column: span 6" />
+          <div class="skeleton skeleton--half" />
+          <div class="skeleton skeleton--half" />
+          <div class="skeleton skeleton--half" />
+          <div class="skeleton skeleton--half" />
         </div>
       </div>
 
@@ -68,50 +68,52 @@
           <div
             v-for="orb in heroOrbs"
             :key="orb.id"
+            v-hero-orb="orb"
             :class="['hero-orb', { 'hero-orb--pulse': orb.pulsing }]"
             aria-hidden="true"
-            :style="{
-              transform: `translate(${orb.x}px, ${orb.y}px) scale(${orb.scale})`,
-              '--hero-orb-color': orb.color,
-              '--hero-orb-opacity': orb.opacity.toString(),
-            }"
             @click="pulseHeroOrb(orb.id)"
             @animationend="onOrbPulseEnd(orb.id)"
           />
           <div class="hero-panel__top">
             <div class="stack">
-              <div class="eyebrow">Milestone 1 dashboard</div>
+              <div class="eyebrow">This week</div>
               <h1 id="dashboard-title" class="hero-panel__title">
-                {{ greeting }}, learner.
+                {{ greeting }}
               </h1>
               <div class="hero-panel__copy-row">
-                <p class="hero-panel__copy">
-                  {{ weeklySkillCount }}
-                  {{ weeklySkillCount === 1 ? "skill" : "skills" }} practiced
-                  this week
-                </p>
-                <div
-                  :class="['status-pill', streakClass(overallStreak.status)]"
-                >
-                  {{ overallStreakLabel }}
-                </div>
+                <p class="hero-panel__copy">{{ weeklyActivitySummary }}</p>
               </div>
             </div>
-            <div class="hero-panel__actions">
-              <button
-                class="btn btn--primary"
-                type="button"
-                @click="sessionDialogOpen = true"
+            <div class="hero-summary">
+              <div
+                :class="['hero-streak-card', streakClass(overallStreak.status)]"
               >
-                Log session
-              </button>
-              <button
-                class="btn btn--secondary"
-                type="button"
-                @click="skillDialogOpen = true"
-              >
-                + Add skill
-              </button>
+                <div class="hero-streak-card__label">Overall streak</div>
+                <div class="hero-streak-card__value">
+                  {{ heroStreakValue }}
+                </div>
+                <p class="hero-streak-card__copy">
+                  {{ heroStreakSupport }}
+                </p>
+              </div>
+
+              <div class="hero-panel__actions">
+                <button
+                  class="btn btn--primary"
+                  type="button"
+                  @click="handlePrimaryHeroAction"
+                >
+                  {{ primaryHeroActionLabel }}
+                </button>
+                <button
+                  v-if="hasSkills"
+                  class="btn btn--secondary"
+                  type="button"
+                  @click="skillDialogOpen = true"
+                >
+                  + Add skill
+                </button>
+              </div>
             </div>
           </div>
 
@@ -207,7 +209,6 @@
         <section class="bento-grid" aria-label="Dashboard widgets">
           <article
             class="panel panel--featured"
-            :style="{ '--skill-accent': featuredSkill?.skill.color }"
             aria-labelledby="featured-title"
           >
             <div class="panel__header">
@@ -300,15 +301,12 @@
                 v-for="session in recentSessions"
                 :key="session.id"
                 class="session-item"
+                v-skill-color="session.skillColor"
               >
                 <div class="session-item__summary">
                   <div class="session-item__title-row">
                     <span class="session-item__title-group">
-                      <span
-                        class="skill-swatch"
-                        :style="{ backgroundColor: session.skillColor }"
-                        aria-hidden="true"
-                      />
+                      <span class="skill-swatch" aria-hidden="true" />
                       <strong>{{ session.skillName }}</strong>
                     </span>
                   </div>
@@ -372,16 +370,12 @@
                 v-for="summary in skillSummaries"
                 :key="summary.skill.id"
                 class="skill-card"
-                :style="{ '--skill-color': summary.skill.color }"
+                v-skill-color="summary.skill.color"
               >
                 <SkillCardOrb />
                 <div class="skill-card__header">
                   <div class="skill-card__title-row">
-                    <span
-                      class="skill-swatch"
-                      :style="{ backgroundColor: summary.skill.color }"
-                      aria-hidden="true"
-                    />
+                    <span class="skill-swatch" aria-hidden="true" />
                     <h3 class="skill-card__name">{{ summary.skill.name }}</h3>
                   </div>
                   <div class="skill-card__best-badge">
@@ -407,15 +401,7 @@
                   >
                     <div
                       class="skill-card__progress-fill"
-                      :style="{
-                        width: summary.progressMax
-                          ? Math.min(
-                              (summary.progressValue / summary.progressMax) *
-                                100,
-                              100,
-                            ) + '%'
-                          : '0%',
-                      }"
+                      v-progress-width="skillProgressWidth(summary)"
                     />
                   </div>
                 </div>
@@ -492,12 +478,12 @@
                     <div
                       v-if="day"
                       class="heatmap-cell"
+                      v-heatmap-cell-index="index"
                       :data-bucket="day.bucket"
                       :data-today="day.isToday ? 'true' : 'false'"
                       :title="day.summary"
                       :aria-label="day.summary"
                       role="gridcell"
-                      :style="{ '--cell-index': index }"
                     />
                     <div
                       v-else
@@ -514,20 +500,16 @@
                 <div class="legend-scale" aria-hidden="true">
                   <span>Less</span>
                   <span
-                    class="legend-scale__cell"
-                    style="background: var(--color-heatmap-empty)"
+                    class="legend-scale__cell legend-scale__cell--empty"
                   ></span>
                   <span
-                    class="legend-scale__cell"
-                    style="background: var(--color-heatmap-light)"
+                    class="legend-scale__cell legend-scale__cell--light"
                   ></span>
                   <span
-                    class="legend-scale__cell"
-                    style="background: var(--color-heatmap-medium)"
+                    class="legend-scale__cell legend-scale__cell--medium"
                   ></span>
                   <span
-                    class="legend-scale__cell"
-                    style="background: var(--color-heatmap-heavy)"
+                    class="legend-scale__cell legend-scale__cell--heavy"
                   ></span>
                   <span>More</span>
                 </div>
@@ -897,6 +879,14 @@ useHead({
 const liveMessage = ref("");
 const sessionDialogOpen = ref(false);
 const skillDialogOpen = ref(false);
+const hasSkills = computed(() => skills.value.length > 0);
+const featuredSkillAccent = computed(
+  () => featuredSkill.value?.skill.color ?? "var(--color-accent)",
+);
+
+useCssVars(() => ({
+  "skill-accent": featuredSkillAccent.value,
+}));
 
 const heroPanelRef = ref<HTMLElement | null>(null);
 const HERO_ORB_HALF = 112;
@@ -922,6 +912,111 @@ interface HeroOrbState {
   wanderDrift: number;
   pulsing: boolean;
 }
+
+function setCustomProperty(
+  el: HTMLElement,
+  property: string,
+  value: string | null,
+) {
+  if (value === null) {
+    el.style.removeProperty(property);
+    return;
+  }
+
+  el.style.setProperty(property, value);
+}
+
+function applySkillColor(el: HTMLElement, color: unknown) {
+  setCustomProperty(
+    el,
+    "--skill-color",
+    typeof color === "string" && color ? color : null,
+  );
+}
+
+function applyProgressWidth(el: HTMLElement, width: unknown) {
+  setCustomProperty(
+    el,
+    "--skill-progress-width",
+    typeof width === "string" && width ? width : null,
+  );
+}
+
+function applyHeatmapCellIndex(el: HTMLElement, index: unknown) {
+  setCustomProperty(
+    el,
+    "--cell-index",
+    typeof index === "number" ? `${index}` : null,
+  );
+}
+
+function applyHeroOrbStyles(el: HTMLElement, orb: unknown) {
+  if (!orb || typeof orb !== "object") {
+    el.style.removeProperty("--hero-orb-transform");
+    el.style.removeProperty("--hero-orb-color");
+    el.style.removeProperty("--hero-orb-opacity");
+    return;
+  }
+
+  const heroOrb = orb as HeroOrbState;
+  setCustomProperty(
+    el,
+    "--hero-orb-transform",
+    `translate(${heroOrb.x}px, ${heroOrb.y}px) scale(${heroOrb.scale})`,
+  );
+  setCustomProperty(el, "--hero-orb-color", heroOrb.color);
+  setCustomProperty(el, "--hero-orb-opacity", `${heroOrb.opacity}`);
+}
+
+const vSkillColor = {
+  mounted(el: HTMLElement, binding: { value: unknown }) {
+    applySkillColor(el, binding.value);
+  },
+  updated(el: HTMLElement, binding: { value: unknown }) {
+    applySkillColor(el, binding.value);
+  },
+  unmounted(el: HTMLElement) {
+    el.style.removeProperty("--skill-color");
+  },
+};
+
+const vProgressWidth = {
+  mounted(el: HTMLElement, binding: { value: unknown }) {
+    applyProgressWidth(el, binding.value);
+  },
+  updated(el: HTMLElement, binding: { value: unknown }) {
+    applyProgressWidth(el, binding.value);
+  },
+  unmounted(el: HTMLElement) {
+    el.style.removeProperty("--skill-progress-width");
+  },
+};
+
+const vHeatmapCellIndex = {
+  mounted(el: HTMLElement, binding: { value: unknown }) {
+    applyHeatmapCellIndex(el, binding.value);
+  },
+  updated(el: HTMLElement, binding: { value: unknown }) {
+    applyHeatmapCellIndex(el, binding.value);
+  },
+  unmounted(el: HTMLElement) {
+    el.style.removeProperty("--cell-index");
+  },
+};
+
+const vHeroOrb = {
+  mounted(el: HTMLElement, binding: { value: unknown }) {
+    applyHeroOrbStyles(el, binding.value);
+  },
+  updated(el: HTMLElement, binding: { value: unknown }) {
+    applyHeroOrbStyles(el, binding.value);
+  },
+  unmounted(el: HTMLElement) {
+    el.style.removeProperty("--hero-orb-transform");
+    el.style.removeProperty("--hero-orb-color");
+    el.style.removeProperty("--hero-orb-opacity");
+  },
+};
 
 const heroOrbs = ref<HeroOrbState[]>([]);
 const orbHovered = ref(false);
@@ -1312,42 +1407,72 @@ watch(
 
 const greeting = computed(() => {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  if (hour < 12) return "Good morning.";
+  if (hour < 18) return "Good afternoon.";
+  return "Good evening.";
 });
 
-const weeklySkillCount = computed(() => {
-  const weekStart = toDateKey(startOfWeek(parseDateKey(todayKey.value)));
-  const uniqueSkills = new Set(
-    sessions.value.filter((s) => s.date >= weekStart).map((s) => s.skillId),
+const currentWeekStart = computed(() =>
+  toDateKey(startOfWeek(parseDateKey(todayKey.value))),
+);
+
+const sessionsThisWeek = computed(() =>
+  sessions.value.filter((session) => session.date >= currentWeekStart.value),
+);
+
+const weeklyActivitySummary = computed(() => {
+  const sessionCount = sessionsThisWeek.value.length;
+
+  if (!sessionCount) {
+    return "No sessions logged this week yet";
+  }
+
+  const totalMinutes = sessionsThisWeek.value.reduce(
+    (sum, session) => sum + session.durationMinutes,
+    0,
   );
-  return uniqueSkills.size;
+  const totalTime = formatMinutes(totalMinutes);
+
+  if (sessionCount === 1) {
+    return `1 session logged this week for ${totalTime} total`;
+  }
+
+  return `${sessionCount} sessions logged this week for ${totalTime} total`;
 });
 
-const overallStreakLabel = computed(() => {
+const heroStreakValue = computed(() => {
+  if (overallStreak.value.status === "broken") {
+    return "Start today";
+  }
+
+  const unit = overallStreak.value.count === 1 ? "day" : "days";
+  return `${overallStreak.value.count} ${unit}`;
+});
+
+const heroStreakSupport = computed(() => {
   if (overallStreak.value.status === "active") {
-    return `${overallStreak.value.count} day overall streak`;
+    return "You logged practice today. Keep the streak moving tomorrow.";
   }
 
   if (overallStreak.value.status === "at-risk") {
-    return `${overallStreak.value.count} day streak at risk today`;
+    return "At risk today. Log one session to keep the streak alive.";
   }
 
-  return "No active overall streak yet";
+  return "Your first session begins a streak.";
 });
 
-const summaryCopy = computed(() => {
-  if (!skills.value.length) {
-    return "Seed data has been replaced or cleared in this browser. Add a skill below to rebuild the dashboard.";
+const primaryHeroActionLabel = computed(() =>
+  hasSkills.value ? "Log session" : "Add your first skill",
+);
+
+function handlePrimaryHeroAction() {
+  if (hasSkills.value) {
+    sessionDialogOpen.value = true;
+    return;
   }
 
-  if (!featuredSkill.value) {
-    return "You have skills ready to track. Log the next session to surface your current focus automatically.";
-  }
-
-  return `${featuredSkill.value.skill.name} is currently leading your dashboard based on total effort, recent practice, and streak momentum.`;
-});
+  skillDialogOpen.value = true;
+}
 
 function streakClass(
   status: SkillSummary["streakStatus"] | typeof overallStreak.value.status,
@@ -1361,6 +1486,14 @@ function streakClass(
   }
 
   return "status-pill--broken";
+}
+
+function skillProgressWidth(summary: SkillSummary) {
+  if (!summary.progressMax) {
+    return "0%";
+  }
+
+  return `${Math.min((summary.progressValue / summary.progressMax) * 100, 100)}%`;
 }
 
 function skillStreakLabel(summary: SkillSummary) {

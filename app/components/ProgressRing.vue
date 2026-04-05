@@ -18,6 +18,11 @@ const props = withDefaults(
   },
 );
 
+useCssVars(() => ({
+  "ring-size": `${props.size}px`,
+  "ring-color": props.color,
+}));
+
 const clampedRatio = computed(() => {
   if (!props.max || props.max <= 0) {
     return 0;
@@ -52,12 +57,7 @@ const normalizedValue = computed(() => Math.round(clampedRatio.value * 100));
 </script>
 
 <template>
-  <div
-    class="progress-ring"
-    :style="{ '--ring-size': `${size}px`, '--ring-color': color }"
-    role="img"
-    :aria-label="label"
-  >
+  <div class="progress-ring" role="img" :aria-label="label">
     <svg
       class="progress-ring__svg"
       :width="size"

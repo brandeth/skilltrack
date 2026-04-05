@@ -10,6 +10,11 @@ let orbRaf = 0;
 let prevX = 0;
 let prevY = 0;
 const ORB_HALF = 64; // half of 8rem (128px)
+const orbTransform = computed(() => `translate(${orbPos.x}px, ${orbPos.y}px)`);
+
+useCssVars(() => ({
+  "skill-card-orb-transform": orbTransform.value,
+}));
 
 function clamp(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val));
@@ -142,7 +147,6 @@ onUnmounted(() => {
   <div ref="areaRef" class="skill-card__orb-area" aria-hidden="true">
     <div
       :class="['skill-card__orb', { 'skill-card__orb--pulse': orbPulsing }]"
-      :style="{ transform: `translate(${orbPos.x}px, ${orbPos.y}px)` }"
       @click="onOrbClick"
       @animationend="orbPulsing = false"
     />

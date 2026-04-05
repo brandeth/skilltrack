@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CSSProperties } from "vue";
+import type { ComponentPublicInstance } from "vue";
 
 interface SelectOption {
   value: string;
@@ -34,10 +34,10 @@ const triggerRef = ref<HTMLButtonElement | null>(null);
 const listboxRef = ref<HTMLElement | null>(null);
 const optionRefs = ref<Array<HTMLElement | undefined>>([]);
 const isOpen = ref(false);
+const isMenuPositioned = ref(false);
 const activeIndex = ref(-1);
 const fallbackId = useId();
 const typeaheadBuffer = ref("");
-const menuStyle = ref<CSSProperties>({});
 let typeaheadTimeout: ReturnType<typeof setTimeout> | null = null;
 let positionRaf: number | null = null;
 
@@ -95,6 +95,7 @@ watch(isOpen, (open) => {
   }
 
   if (open) {
+    isMenuPositioned.value = false;
     window.addEventListener("resize", scheduleMenuPositionUpdate);
     document.addEventListener("scroll", scheduleMenuPositionUpdate, true);
 
@@ -108,6 +109,7 @@ watch(isOpen, (open) => {
 
   window.removeEventListener("resize", scheduleMenuPositionUpdate);
   document.removeEventListener("scroll", scheduleMenuPositionUpdate, true);
+  clearMenuPosition();
 
   if (positionRaf !== null) {
     window.cancelAnimationFrame(positionRaf);
@@ -129,8 +131,60 @@ function isTargetInsideSelect(target: Node | null) {
   );
 }
 
+function setCustomProperty(
+  el: HTMLElement,
+  property: string,
+  value: string | null,
+) {
+  if (value === null) {
+    el.style.removeProperty(property);
+    return;
+  }
+
+  el.style.setProperty(property, value);
+}
+
+function applySwatchColor(el: HTMLElement, color: unknown) {
+  setCustomProperty(
+    el,
+    "--select-swatch-color",
+    typeof color === "string" && color ? color : null,
+  );
+}
+
+const vSwatchColor = {
+  mounted(el: HTMLElement, binding: { value: unknown }) {
+    applySwatchColor(el, binding.value);
+  },
+  updated(el: HTMLElement, binding: { value: unknown }) {
+    applySwatchColor(el, binding.value);
+  },
+  unmounted(el: HTMLElement) {
+    el.style.removeProperty("--select-swatch-color");
+  },
+};
+
+function clearMenuPosition() {
+  const menu = listboxRef.value;
+  if (!menu) {
+    return;
+  }
+
+  menu.style.removeProperty("--listbox-left");
+  menu.style.removeProperty("--listbox-width");
+  menu.style.removeProperty("--listbox-max-height");
+  menu.style.removeProperty("--listbox-top");
+  menu.style.removeProperty("--listbox-bottom");
+  isMenuPositioned.value = false;
+}
+
 function updateMenuPosition() {
   if (!import.meta.client || !isOpen.value || !triggerRef.value) {
+    return;
+  }
+
+  const menu = listboxRef.value;
+  if (!menu) {
     return;
   }
 
@@ -157,16 +211,24 @@ function updateMenuPosition() {
     Math.max(window.innerWidth - VIEWPORT_PADDING - width, VIEWPORT_PADDING),
   );
 
-  menuStyle.value = {
-    position: "fixed",
-    left: `${left}px`,
-    width: `${width}px`,
-    maxHeight: `${maxHeight}px`,
-    top: placeBelow ? `${rect.bottom + MENU_OFFSET}px` : "auto",
-    bottom: placeBelow
-      ? "auto"
-      : `${window.innerHeight - rect.top + MENU_OFFSET}px`,
-  };
+  setCustomProperty(menu, "--listbox-left", `${left}px`);
+  setCustomProperty(menu, "--listbox-width", `${width}px`);
+  setCustomProperty(
+    menu,
+    "--listbox-max-height",
+    `${Math.max(maxHeight, 0)}px`,
+  );
+  setCustomProperty(
+    menu,
+    "--listbox-top",
+    placeBelow ? `${rect.bottom + MENU_OFFSET}px` : null,
+  );
+  setCustomProperty(
+    menu,
+    "--listbox-bottom",
+    placeBelow ? null : `${window.innerHeight - rect.top + MENU_OFFSET}px`,
+  );
+  isMenuPositioned.value = true;
 }
 
 function scheduleMenuPositionUpdate() {
@@ -184,7 +246,10 @@ function scheduleMenuPositionUpdate() {
   });
 }
 
-function setOptionRef(el: Element | null, index: number) {
+function setOptionRef(
+  el: Element | ComponentPublicInstance | null,
+  index: number,
+) {
   if (el instanceof HTMLElement) {
     optionRefs.value[index] = el;
     return;
@@ -508,6 +573,7 @@ onUnmounted(() => {
   if (import.meta.client) {
     window.removeEventListener("resize", scheduleMenuPositionUpdate);
     document.removeEventListener("scroll", scheduleMenuPositionUpdate, true);
+    clearMenuPosition();
 
     if (positionRaf !== null) {
       window.cancelAnimationFrame(positionRaf);
@@ -540,8 +606,8 @@ onUnmounted(() => {
         <span class="listbox-select__value-wrap">
           <span
             v-if="selectedOption?.color"
+            v-swatch-color="selectedOption.color"
             class="listbox-select__swatch listbox-select__swatch--trigger"
-            :style="{ '--select-swatch-color': selectedOption.color }"
             aria-hidden="true"
           />
           <span
@@ -579,8 +645,10 @@ onUnmounted(() => {
         v-if="isOpen"
         :id="listboxId"
         ref="listboxRef"
-        class="listbox-select__menu"
-        :style="menuStyle"
+        :class="[
+          'listbox-select__menu',
+          { 'listbox-select__menu--positioned': isMenuPositioned },
+        ]"
         role="listbox"
         tabindex="0"
         :aria-labelledby="labelId"
@@ -589,54 +657,50 @@ onUnmounted(() => {
         @focusout="onFocusOut"
         @keydown="onListboxKeydown"
       >
-        <div style="overflow-y: scroll; max-height: 256px">
-          <div
-            v-for="(option, index) in options"
-            :id="getOptionId(index)"
-            :key="option.value"
-            :ref="(el) => setOptionRef(el, index)"
-            :class="[
-              'listbox-select__option',
-              {
-                'listbox-select__option--active': index === activeIndex,
-                'listbox-select__option--selected': option.value === modelValue,
-              },
-            ]"
-            role="option"
-            :aria-selected="option.value === modelValue"
-            @mouseenter="setActiveIndex(index)"
-            @mousedown.prevent
-            @click="selectOption(option.value)"
-          >
-            <span class="listbox-select__option-label">
-              <span
-                v-if="option.color"
-                class="listbox-select__swatch"
-                :style="{ '--select-swatch-color': option.color }"
-                aria-hidden="true"
-              />
-              <span class="listbox-select__option-text">{{
-                option.label
-              }}</span>
-            </span>
-
-            <svg
-              class="listbox-select__check"
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
+        <div
+          v-for="(option, index) in options"
+          :id="getOptionId(index)"
+          :key="option.value"
+          :ref="(el) => setOptionRef(el, index)"
+          :class="[
+            'listbox-select__option',
+            {
+              'listbox-select__option--active': index === activeIndex,
+              'listbox-select__option--selected': option.value === modelValue,
+            },
+          ]"
+          role="option"
+          :aria-selected="option.value === modelValue"
+          @mouseenter="setActiveIndex(index)"
+          @mousedown.prevent
+          @click="selectOption(option.value)"
+        >
+          <span class="listbox-select__option-label">
+            <span
+              v-if="option.color"
+              v-swatch-color="option.color"
+              class="listbox-select__swatch"
               aria-hidden="true"
-            >
-              <path
-                d="M2.5 7.2L5.5 10.2L11.5 4.2"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </div>
+            />
+            <span class="listbox-select__option-text">{{ option.label }}</span>
+          </span>
+
+          <svg
+            class="listbox-select__check"
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            aria-hidden="true"
+          >
+            <path
+              d="M2.5 7.2L5.5 10.2L11.5 4.2"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
         </div>
       </div>
     </Teleport>
@@ -725,16 +789,28 @@ onUnmounted(() => {
 }
 
 .listbox-select__menu {
+  position: fixed;
+  left: var(--listbox-left, 0px);
+  width: var(--listbox-width, 100%);
+  max-height: var(--listbox-max-height, min(16rem, 40vh));
+  top: var(--listbox-top, auto);
+  bottom: var(--listbox-bottom, auto);
   z-index: 60;
   display: grid;
   gap: var(--space-1);
-  max-height: min(16rem, 40vh);
   padding: var(--space-2);
-  /* overflow-y: auto; */
+  overflow-y: auto;
   border: 1px solid color-mix(in srgb, var(--color-border) 92%, transparent);
   border-radius: calc(var(--radius-lg) + 0.125rem);
   background: color-mix(in srgb, var(--color-surface) 96%, transparent);
   box-shadow: var(--shadow-lg);
+  opacity: 0;
+  visibility: hidden;
+}
+
+.listbox-select__menu--positioned {
+  opacity: 1;
+  visibility: visible;
 }
 
 .listbox-select__option {

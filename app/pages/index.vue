@@ -58,7 +58,9 @@
                   <div class="showcase-pill showcase-pill--active">Active</div>
                 </div>
                 <div class="showcase-streak-hero">
-                  <span class="showcase-streak-fire" aria-hidden="true">🔥</span>
+                  <span class="showcase-streak-fire" aria-hidden="true"
+                    >🔥</span
+                  >
                   <span class="showcase-card__value">12 days</span>
                 </div>
                 <div class="showcase-streak-detail">
@@ -110,8 +112,7 @@
                     <span class="showcase-hours-bar__name">Spanish</span>
                     <div class="showcase-hours-bar__track">
                       <div
-                        class="showcase-hours-bar__fill"
-                        style="width: 100%; background-color: #059669"
+                        class="showcase-hours-bar__fill showcase-hours-bar__fill--spanish"
                       />
                     </div>
                     <span class="showcase-hours-bar__val">14.2</span>
@@ -120,8 +121,7 @@
                     <span class="showcase-hours-bar__name">Guitar</span>
                     <div class="showcase-hours-bar__track">
                       <div
-                        class="showcase-hours-bar__fill"
-                        style="width: 72%; background-color: #8b5cf6"
+                        class="showcase-hours-bar__fill showcase-hours-bar__fill--guitar"
                       />
                     </div>
                     <span class="showcase-hours-bar__val">10.3</span>
@@ -130,8 +130,7 @@
                     <span class="showcase-hours-bar__name">TypeScript</span>
                     <div class="showcase-hours-bar__track">
                       <div
-                        class="showcase-hours-bar__fill"
-                        style="width: 58%; background-color: #3178c6"
+                        class="showcase-hours-bar__fill showcase-hours-bar__fill--typescript"
                       />
                     </div>
                     <span class="showcase-hours-bar__val">8.2</span>
@@ -492,6 +491,21 @@ const heatmapBuckets = [
 .showcase-hours-bar__fill {
   height: 100%;
   border-radius: var(--radius-full);
+}
+
+.showcase-hours-bar__fill--spanish {
+  width: 100%;
+  background-color: #059669;
+}
+
+.showcase-hours-bar__fill--guitar {
+  width: 72%;
+  background-color: #8b5cf6;
+}
+
+.showcase-hours-bar__fill--typescript {
+  width: 58%;
+  background-color: #3178c6;
 }
 
 .showcase-hours-bar__val {

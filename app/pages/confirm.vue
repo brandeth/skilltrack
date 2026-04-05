@@ -8,7 +8,7 @@
       role="alert"
     >
       {{ errorMessage }}
-      <div style="margin-top: var(--space-4)">
+      <div class="confirm-error-actions">
         <NuxtLink to="/login" class="auth-link">Back to sign in</NuxtLink>
       </div>
     </div>
@@ -73,5 +73,9 @@ onMounted(async () => {
 
 .auth-link:hover {
   text-decoration: underline;
+}
+
+.confirm-error-actions {
+  margin-top: var(--space-4);
 }
 </style>
