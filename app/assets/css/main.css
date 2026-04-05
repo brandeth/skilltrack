@@ -387,10 +387,22 @@ button {
   :root:not([data-theme="light"]) .btn--primary {
     color: #111827;
   }
+
+  :root:not([data-theme="light"])
+    .field
+    input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
 }
 
 [data-theme="dark"] .btn--primary {
   color: #111827;
+}
+
+[data-theme="dark"]
+  .field
+  input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }
 
 .btn--secondary,
