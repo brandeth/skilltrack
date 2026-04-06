@@ -25,7 +25,7 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero__inner">
           <div class="hero__content">
-            <div class="eyebrow">For learners who show up</div>
+            <div class="eyebrow">For learners who always show up</div>
             <h1 id="hero-title" class="hero__title">
               See every hour you've invested in becoming better.
             </h1>
