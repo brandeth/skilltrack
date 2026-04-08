@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="landing">
+  <div ref="landingRoot" class="landing">
     <header class="topbar">
       <div class="topbar__inner">
         <div class="brand" aria-label="SkillTrack home">
@@ -25,7 +25,7 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero__inner">
           <div class="hero__content">
-            <div class="eyebrow">For learners who always show up</div>
+            <div class="eyebrow">For learners who show up</div>
             <h1 id="hero-title" class="hero__title">
               See every hour you've invested in becoming better.
             </h1>
@@ -248,11 +248,132 @@ useHead({
   title: "SkillTrack — See every hour you've invested in becoming better",
 });
 
+const landingRoot = ref<HTMLElement | null>(null);
+
+let activeAnimations: Array<{
+  revert: (config?: object) => unknown;
+  kill?: () => unknown;
+}> = [];
+
 // Decorative heatmap data for the hero visual
 const heatmapBuckets = [
   0, 1, 0, 2, 3, 1, 0, 1, 2, 0, 0, 3, 2, 1, 0, 0, 1, 3, 2, 0, 1, 2, 3, 1, 0, 1,
   0, 2, 0, 1, 2, 3, 1, 0, 0,
 ];
+
+onMounted(async () => {
+  if (!landingRoot.value) {
+    return;
+  }
+
+  await nextTick();
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return;
+  }
+
+  const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+    import("gsap"),
+    import("gsap/ScrollTrigger"),
+  ]);
+
+  if (!landingRoot.value) {
+    return;
+  }
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  const select = gsap.utils.selector(landingRoot.value);
+  const clearProps = "transform,opacity,visibility";
+
+  const heroTimeline = gsap.timeline({
+    defaults: {
+      duration: 0.72,
+      ease: "power2.out",
+    },
+  });
+
+  heroTimeline
+    .from(select(".topbar__inner"), {
+      y: -18,
+      autoAlpha: 0,
+      duration: 0.48,
+      clearProps,
+    })
+    .from(
+      select(".hero__content > *"),
+      {
+        y: 24,
+        autoAlpha: 0,
+        stagger: 0.08,
+        clearProps,
+      },
+      "-=0.16",
+    )
+    .from(
+      select(".showcase-card"),
+      {
+        y: 28,
+        autoAlpha: 0,
+        scale: 0.985,
+        stagger: 0.1,
+        duration: 0.64,
+        clearProps,
+      },
+      "-=0.42",
+    );
+
+  activeAnimations.push(heroTimeline);
+
+  const featureCards = select(".feature-card");
+  const featuresSection = select(".features")[0];
+  if (featureCards.length && featuresSection) {
+    activeAnimations.push(
+      gsap.from(featureCards, {
+        y: 24,
+        autoAlpha: 0,
+        stagger: 0.12,
+        duration: 0.58,
+        ease: "power2.out",
+        clearProps,
+        scrollTrigger: {
+          trigger: featuresSection,
+          start: "top 78%",
+          once: true,
+        },
+      }),
+    );
+  }
+
+  const ctaItems = select(".cta-section__inner > *");
+  const ctaSection = select(".cta-section")[0];
+  if (ctaItems.length && ctaSection) {
+    activeAnimations.push(
+      gsap.from(ctaItems, {
+        y: 20,
+        autoAlpha: 0,
+        stagger: 0.1,
+        duration: 0.56,
+        ease: "power2.out",
+        clearProps,
+        scrollTrigger: {
+          trigger: ctaSection,
+          start: "top 82%",
+          once: true,
+        },
+      }),
+    );
+  }
+});
+
+onBeforeUnmount(() => {
+  for (const animation of [...activeAnimations].reverse()) {
+    animation.revert();
+    animation.kill?.();
+  }
+
+  activeAnimations = [];
+});
 </script>
 
 <style scoped>
